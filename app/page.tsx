@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Crown, Gamepad2, ImageIcon, MapPinned, Play, Plus, ScanLine, Sparkles, Trophy, Users } from "lucide-react";
+import { ensureGameIdentity, supabase } from "@/lib/supabase";
 
 const games = [
   { id: "who", title: "Who Am I?", kicker: "The picture game", icon: ImageIcon, color: "lime", description: "Guess your hidden identity while the table gives clues.", meta: "Kenya · East Africa · World" },
@@ -17,10 +18,83 @@ export default function Home() {
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [selectedGame, setSelectedGame] = useState("who");
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState("");
+  const [liveRoomId, setLiveRoomId] = useState("");
+  const [players, setPlayers] = useState<string[]>([]);
   const room = useMemo(() => roomCode || "KAVE", [roomCode]);
   const chosenGame = games.find((game) => game.id === selectedGame) ?? games[0];
 
-  if (screen === "lobby") return <Lobby room={room} selectedGame={selectedGame} setSelectedGame={setSelectedGame} chosenGame={chosenGame} onHome={() => setScreen("home")} />;
+  useEffect(() => {
+    if (!liveRoomId || !supabase) return;
+    const loadPlayers = async () => {
+      const { data } = await supabase.from("room_players").select("nickname").eq("room_id", liveRoomId).order("joined_at");
+      setPlayers((data ?? []).map((player) => player.nickname));
+    };
+    void loadPlayers();
+    const channel = supabase
+      .channel("room-" + liveRoomId)
+      .on("postgres_changes", { event: "*", schema: "public", table: "room_players", filter: "room_id=eq." + liveRoomId }, loadPlayers)
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [liveRoomId]);
+
+  async function createLiveRoom() {
+    setConnectionError("");
+    setIsConnecting(true);
+    try {
+      const user = await ensureGameIdentity();
+      if (!supabase) throw new Error("The live game service is not configured yet.");
+      const code = Array.from({ length: 4 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
+      const { data: created, error: roomError } = await supabase
+        .from("rooms")
+        .insert({ code, host_id: user.id })
+        .select("id, code")
+        .single();
+      if (roomError || !created) throw roomError ?? new Error("Could not create the room.");
+      const { error: playerError } = await supabase
+        .from("room_players")
+        .insert({ room_id: created.id, user_id: user.id, nickname: name.trim() });
+      if (playerError) throw playerError;
+      setLiveRoomId(created.id);
+      setPlayers([name.trim()]);
+      setRoomCode(created.code);
+      setScreen("lobby");
+    } catch (error) {
+      setConnectionError(error instanceof Error ? error.message : "Could not create the room. Try again.");
+    } finally {
+      setIsConnecting(false);
+    }
+  }
+
+  async function joinLiveRoom() {
+    setConnectionError("");
+    setIsConnecting(true);
+    try {
+      const user = await ensureGameIdentity();
+      if (!supabase) throw new Error("The live game service is not configured yet.");
+      const { data: room, error: lookupError } = await supabase
+        .from("rooms")
+        .select("id, code")
+        .eq("code", roomCode)
+        .eq("status", "lobby")
+        .single();
+      if (lookupError || !room) throw new Error("That room was not found or has already started.");
+      const { error: playerError } = await supabase
+        .from("room_players")
+        .upsert({ room_id: room.id, user_id: user.id, nickname: name.trim() }, { onConflict: "room_id,user_id" });
+      if (playerError) throw playerError;
+      setLiveRoomId(room.id);
+      setPlayers([name.trim()]);
+      setScreen("lobby");
+    } catch (error) {
+      setConnectionError(error instanceof Error ? error.message : "Could not join the room. Try again.");
+    } finally {
+      setIsConnecting(false);
+    }
+  }
+
+  if (screen === "lobby") return <Lobby room={room} players={players} selectedGame={selectedGame} setSelectedGame={setSelectedGame} chosenGame={chosenGame} onHome={() => setScreen("home")} />;
 
   if (screen === "create" || screen === "join") {
     const isCreate = screen === "create";
@@ -33,7 +107,8 @@ export default function Home() {
         <label className="field-label mt-7" htmlFor="name">Your game name</label>
         <input id="name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Kave" className="field" />
         {!isCreate && <><label className="field-label mt-5" htmlFor="room">Room code</label><input id="room" value={roomCode} onChange={(e) => setRoomCode(e.target.value.toUpperCase().slice(0, 4))} placeholder="KAVE" className="field font-mono uppercase tracking-[.2em]" /></>}
-        <button className="button-dark mt-7 w-full" disabled={!name || (!isCreate && roomCode.length !== 4)} onClick={() => setScreen("lobby")}>{isCreate ? "Create room" : "Join room"} <ArrowRight size={18} /></button>
+        {connectionError && <p role="alert" className="mt-4 text-sm font-bold text-rose-700">{connectionError}</p>}
+        <button className="button-dark mt-7 w-full" disabled={!name || (!isCreate && roomCode.length !== 4) || isConnecting} onClick={isCreate ? createLiveRoom : joinLiveRoom}>{isConnecting ? "Connecting..." : isCreate ? "Create room" : "Join room"} <ArrowRight size={18} /></button>
         <button className="mt-4 w-full text-sm font-bold text-black/50 hover:text-black" onClick={() => setScreen("home")}>Back</button>
       </section>
     </div></main>;
@@ -62,11 +137,11 @@ export default function Home() {
   </div></main>;
 }
 
-function Lobby({ room, selectedGame, setSelectedGame, chosenGame, onHome }: { room: string; selectedGame: string; setSelectedGame: (id: string) => void; chosenGame: typeof games[number]; onHome: () => void }) {
+function Lobby({ room, players, selectedGame, setSelectedGame, chosenGame, onHome }: { room: string; players: string[]; selectedGame: string; setSelectedGame: (id: string) => void; chosenGame: typeof games[number]; onHome: () => void }) {
   return <main className="min-h-screen bg-[#101314] text-white"><div className="mx-auto flex min-h-screen max-w-5xl flex-col px-5 pb-10 pt-5 sm:px-8"><Topbar compact onHome={onHome} />
     <section className="mt-10 grid gap-8 lg:grid-cols-[1.2fr_.8fr] lg:items-start"><div><span className="eyebrow">Live lobby</span><h1 className="mt-3 text-4xl font-black tracking-[-0.06em] sm:text-6xl">The room is<br />ready.</h1><p className="mt-4 max-w-md text-base leading-7 text-white/60">Share this code with your people. Everyone joins on their phone, then you choose the game.</p>
       <div className="mt-7 rounded-[2rem] border border-white/10 bg-white/[.05] p-5 sm:p-7"><div className="flex flex-wrap items-end justify-between gap-5"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-white/45">Room code</p><p className="mt-1 font-mono text-5xl font-black tracking-[.12em] text-[#d7ff3f] sm:text-6xl">{room}</p></div><button className="button-secondary">Copy invite</button></div></div>
-      <div className="mt-8 flex items-center gap-3"><div className="flex -space-x-2">{["K","A","N"].map((letter,index) => <span className={"avatar avatar-" + index} key={letter}>{letter}</span>)}</div><p className="text-sm text-white/55"><strong className="text-white">3 players</strong> in the room · waiting for more</p></div>
+      <div className="mt-8 flex items-center gap-3"><div className="flex -space-x-2">{players.slice(0, 4).map((player,index) => <span className={"avatar avatar-" + (index % 3)} key={player}>{player.slice(0, 1).toUpperCase()}</span>)}</div><p className="text-sm text-white/55"><strong className="text-white">{players.length} player{players.length === 1 ? "" : "s"}</strong> in the room · {players.length < 2 ? "waiting for more" : "ready to play"}</p></div>
     </div><aside className="rounded-[2rem] bg-[#f0eee8] p-5 text-[#101314] sm:p-7"><p className="eyebrow-dark">Choose a game</p><div className="mt-4 space-y-2">{games.map((game) => { const Icon = game.icon; return <button className={"game-select " + (selectedGame === game.id ? "selected" : "")} key={game.id} onClick={() => setSelectedGame(game.id)}><Icon size={19} strokeWidth={2.5} /><span>{game.title}</span>{selectedGame === game.id && <span className="pick-dot" />}</button>; })}</div>
       <div className="mt-6 rounded-2xl bg-[#101314] p-5 text-white"><p className="text-xs font-bold uppercase tracking-[.14em] text-white/40">Selected</p><p className="mt-2 text-xl font-black">{chosenGame.title}</p><p className="mt-1 text-sm text-white/60">{chosenGame.description}</p><button className="button-lime mt-5 w-full">Start game <Play size={16} fill="currentColor" /></button></div>
     </aside></section></div></main>;
