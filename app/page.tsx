@@ -1,22 +1,3 @@
-$ next build
-▲ Next.js 16.2.6 (Turbopack)
-
-  Creating an optimized production build ...
-✓ Compiled successfully in 6.3s
-  Running TypeScript ...
-  Finished TypeScript in 12.6s ...
-  Collecting page data using 4 workers ...
-  Generating static pages using 4 workers (0/3) ...
-✓ Generating static pages using 4 workers (3/3) in 739ms
-  Finalizing page optimization ...
-
-Route (app)
-┌ ○ /
-└ ○ /_not-found
-
-
-○  (Static)  prerendered as static content
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
