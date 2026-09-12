@@ -54,7 +54,7 @@ select v.slug, p.id, c.id, v.game_mode, v.prompt, v.explanation, m.id, v.difficu
 from (values
   ('kenya_capital', 'kenya_core', 'geography', 'trivia', 'What is the capital city of Kenya?', 'Nairobi is Kenya''s capital and largest city.', null, 1, 20, 100, array['kenya','capital']),
   ('equator_kenya', 'kenya_core', 'geography', 'trivia', 'Which imaginary line passes through Kenya?', 'The Equator crosses Kenya and divides Earth into northern and southern hemispheres.', null, 2, 20, 150, array['kenya','equator']),
-  ('wangari_maathai', 'kenya_core', 'who_am_i', 'I was the first African woman to receive the Nobel Peace Prize and founded the Green Belt Movement. Who am I?', 'Wangari Maathai received the Nobel Peace Prize in 2004.', null, 3, 20, 200, array['kenya','women','environment']),
+  ('wangari_maathai', 'kenya_core', 'kenyan_culture', 'who_am_i', 'I was the first African woman to receive the Nobel Peace Prize and founded the Green Belt Movement. Who am I?', 'Wangari Maathai received the Nobel Peace Prize in 2004.', null, 3, 20, 200, array['kenya','women','environment']),
   ('east_africa_mountain', 'east_africa', 'geography', 'trivia', 'What is the highest mountain in Africa?', 'Mount Kilimanjaro, in Tanzania, is Africa''s highest mountain.', null, 2, 20, 150, array['africa','mountain']),
   ('kenya_flag', 'kenya_core', 'flags', 'flag_frenzy', 'Which country does this flag belong to?', 'The shield and crossed spears are distinctive features of Kenya''s flag.', 'ke', 1, 12, 100, array['flag','kenya']),
   ('uganda_flag', 'east_africa', 'flags', 'flag_frenzy', 'Which East African country does this flag belong to?', 'Uganda''s flag features a grey crowned crane.', 'ug', 2, 12, 150, array['flag','east_africa']),
