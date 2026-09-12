@@ -27,16 +27,17 @@ export default function Home() {
 
   useEffect(() => {
     if (!liveRoomId || !supabase) return;
+    const client = supabase;
     const loadPlayers = async () => {
-      const { data } = await supabase.from("room_players").select("nickname").eq("room_id", liveRoomId).order("joined_at");
+      const { data } = await client.from("room_players").select("nickname").eq("room_id", liveRoomId).order("joined_at");
       setPlayers((data ?? []).map((player) => player.nickname));
     };
     void loadPlayers();
-    const channel = supabase
+    const channel = client
       .channel("room-" + liveRoomId)
       .on("postgres_changes", { event: "*", schema: "public", table: "room_players", filter: "room_id=eq." + liveRoomId }, loadPlayers)
       .subscribe();
-    return () => { void supabase.removeChannel(channel); };
+    return () => { void client.removeChannel(channel); };
   }, [liveRoomId]);
 
   async function createLiveRoom() {
