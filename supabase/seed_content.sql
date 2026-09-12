@@ -38,7 +38,8 @@ on conflict (provider, asset_key) do update set public_url = excluded.public_url
 insert into public.round_templates (code, title, game_mode, description) values
   ('trivia_rush_classic', 'Trivia Rush: Classic', 'trivia', 'A three-phase sprint from warm-up to finale.'),
   ('flag_frenzy_africa', 'Flag Frenzy: Africa', 'flag_frenzy', 'Recognise African flags under time pressure.'),
-  ('smart_mix', 'Smart Mix', 'trivia', 'Science, geography, animals and maths in one round.')
+  ('smart_mix', 'Smart Mix', 'trivia', 'Science, geography, animals and maths in one round.'),
+  ('who_am_i_kenya', 'Who Am I?: Kenya', 'who_am_i', 'Kenyan icons and changemakers.')
 on conflict (code) do update set title = excluded.title, description = excluded.description;
 
 insert into public.round_template_steps (template_id, position, category_id, difficulty_min, difficulty_max, question_count, seconds_per_question) values
@@ -46,7 +47,8 @@ insert into public.round_template_steps (template_id, position, category_id, dif
   ((select id from public.round_templates where code = 'trivia_rush_classic'), 2, null, 2, 3, 5, 15),
   ((select id from public.round_templates where code = 'trivia_rush_classic'), 3, null, 3, 5, 5, 10),
   ((select id from public.round_templates where code = 'flag_frenzy_africa'), 1, (select id from public.categories where code = 'flags'), 1, 4, 10, 12),
-  ((select id from public.round_templates where code = 'smart_mix'), 1, null, 1, 3, 12, 18)
+  ((select id from public.round_templates where code = 'smart_mix'), 1, null, 1, 3, 12, 18),
+  ((select id from public.round_templates where code = 'who_am_i_kenya'), 1, (select id from public.categories where code = 'kenyan_culture'), 1, 5, 10, 20)
 on conflict (template_id, position) do update set question_count = excluded.question_count, seconds_per_question = excluded.seconds_per_question;
 
 insert into public.questions (slug, pack_id, category_id, game_mode, prompt, explanation, media_id, difficulty, duration_seconds, base_points, tags, status, source_id, fact_checked_at)
