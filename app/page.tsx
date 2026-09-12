@@ -1,3 +1,22 @@
+$ next build
+▲ Next.js 16.2.6 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 6.3s
+  Running TypeScript ...
+  Finished TypeScript in 12.6s ...
+  Collecting page data using 4 workers ...
+  Generating static pages using 4 workers (0/3) ...
+✓ Generating static pages using 4 workers (3/3) in 739ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+└ ○ /_not-found
+
+
+○  (Static)  prerendered as static content
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -11,7 +30,24 @@ const games = [
   { id: "image", title: "Guess the Image", kicker: "Reveal & race", icon: ScanLine, color: "blue", description: "Name what you see before the image becomes clear.", meta: "Animals · Places · Culture" },
 ];
 
-type Screen = "home" | "create" | "join" | "lobby";
+type Screen = "home" | "create" | "join" | "lobby" | "game" | "results";
+type GameQuestion = {
+  round_id: string;
+  position: number;
+  prompt: string;
+  explanation?: string | null;
+  game_mode: string;
+  duration_seconds: number;
+  base_points: number;
+  media?: { type: string; url: string; alt: string } | null;
+  options: { id: string; text: string }[];
+};
+
+const templateByGame: Record<string, string | undefined> = {
+  who: "who_am_i_kenya",
+  flags: "flag_frenzy_africa",
+  trivia: "trivia_rush_classic",
+};
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("home");
@@ -22,6 +58,10 @@ export default function Home() {
   const [connectionError, setConnectionError] = useState("");
   const [liveRoomId, setLiveRoomId] = useState("");
   const [players, setPlayers] = useState<string[]>([]);
+  const [isHost, setIsHost] = useState(false);
+  const [question, setQuestion] = useState<GameQuestion | null>(null);
+  const [answerResult, setAnswerResult] = useState<{ is_correct: boolean; points_awarded: number } | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const room = useMemo(() => roomCode || "KAVE", [roomCode]);
   const chosenGame = games.find((game) => game.id === selectedGame) ?? games[0];
 
@@ -36,9 +76,27 @@ export default function Home() {
     const channel = client
       .channel("room-" + liveRoomId)
       .on("postgres_changes", { event: "*", schema: "public", table: "room_players", filter: "room_id=eq." + liveRoomId }, loadPlayers)
+      .on("postgres_changes", { event: "*", schema: "public", table: "game_rounds", filter: "room_id=eq." + liveRoomId }, () => {
+        if (screen === "game") void loadCurrentQuestion();
+      })
       .subscribe();
     return () => { void client.removeChannel(channel); };
-  }, [liveRoomId]);
+  }, [liveRoomId, screen]);
+
+  async function loadCurrentQuestion() {
+    if (!supabase || !liveRoomId) return;
+    const { data, error } = await supabase.rpc("current_game_question", { p_room_id: liveRoomId });
+    if (error) {
+      setConnectionError(error.message);
+      return;
+    }
+    if (!data) {
+      setScreen("results");
+      return;
+    }
+    setQuestion(data as GameQuestion);
+    setAnswerResult(null);
+  }
 
   async function createLiveRoom() {
     setConnectionError("");
@@ -60,6 +118,7 @@ export default function Home() {
       setLiveRoomId(created.id);
       setPlayers([name.trim()]);
       setRoomCode(created.code);
+      setIsHost(true);
       setScreen("lobby");
     } catch (error) {
       setConnectionError(error instanceof Error ? error.message : "Could not create the room. Try again.");
@@ -87,6 +146,7 @@ export default function Home() {
       if (playerError) throw playerError;
       setLiveRoomId(room.id);
       setPlayers([name.trim()]);
+      setIsHost(false);
       setScreen("lobby");
     } catch (error) {
       setConnectionError(error instanceof Error ? error.message : "Could not join the room. Try again.");
@@ -95,7 +155,48 @@ export default function Home() {
     }
   }
 
-  if (screen === "lobby") return <Lobby room={room} players={players} selectedGame={selectedGame} setSelectedGame={setSelectedGame} chosenGame={chosenGame} onHome={() => setScreen("home")} />;
+  async function startGame() {
+    const template = templateByGame[selectedGame];
+    if (!template) {
+      setConnectionError("Guess the Image is being prepared with licensed image rounds. Choose another live deck for now.");
+      return;
+    }
+    if (!supabase || !liveRoomId) return;
+    setConnectionError("");
+    setIsPlaying(true);
+    const { error } = await supabase.rpc("start_game", { p_room_id: liveRoomId, p_template_code: template });
+    if (error) {
+      setConnectionError(error.message);
+      setIsPlaying(false);
+      return;
+    }
+    setScreen("game");
+    await loadCurrentQuestion();
+    setIsPlaying(false);
+  }
+
+  async function submitAnswer(optionId: string) {
+    if (!supabase || !question || answerResult) return;
+    setIsPlaying(true);
+    const { data, error } = await supabase.rpc("submit_game_answer", { p_round_id: question.round_id, p_option_id: optionId });
+    if (error) setConnectionError(error.message);
+    else setAnswerResult(data as { is_correct: boolean; points_awarded: number });
+    setIsPlaying(false);
+  }
+
+  async function advanceRound() {
+    if (!supabase || !liveRoomId) return;
+    setIsPlaying(true);
+    const { data, error } = await supabase.rpc("advance_game_round", { p_room_id: liveRoomId });
+    if (error) setConnectionError(error.message);
+    else if ((data as { finished?: boolean }).finished) setScreen("results");
+    else await loadCurrentQuestion();
+    setIsPlaying(false);
+  }
+
+  if (screen === "game" && question) return <GameScreen room={room} question={question} isHost={isHost} isPlaying={isPlaying} answerResult={answerResult} error={connectionError} onAnswer={submitAnswer} onNext={advanceRound} />;
+  if (screen === "results") return <ResultsScreen room={room} players={players} onHome={() => setScreen("home")} />;
+  if (screen === "lobby") return <Lobby room={room} players={players} selectedGame={selectedGame} setSelectedGame={setSelectedGame} chosenGame={chosenGame} isHost={isHost} isPlaying={isPlaying} error={connectionError} onStart={startGame} onHome={() => setScreen("home")} />;
 
   if (screen === "create" || screen === "join") {
     const isCreate = screen === "create";
@@ -138,14 +239,33 @@ export default function Home() {
   </div></main>;
 }
 
-function Lobby({ room, players, selectedGame, setSelectedGame, chosenGame, onHome }: { room: string; players: string[]; selectedGame: string; setSelectedGame: (id: string) => void; chosenGame: typeof games[number]; onHome: () => void }) {
+function Lobby({ room, players, selectedGame, setSelectedGame, chosenGame, isHost, isPlaying, error, onStart, onHome }: { room: string; players: string[]; selectedGame: string; setSelectedGame: (id: string) => void; chosenGame: typeof games[number]; isHost: boolean; isPlaying: boolean; error: string; onStart: () => void; onHome: () => void }) {
   return <main className="min-h-screen bg-[#101314] text-white"><div className="mx-auto flex min-h-screen max-w-5xl flex-col px-5 pb-10 pt-5 sm:px-8"><Topbar compact onHome={onHome} />
     <section className="mt-10 grid gap-8 lg:grid-cols-[1.2fr_.8fr] lg:items-start"><div><span className="eyebrow">Live lobby</span><h1 className="mt-3 text-4xl font-black tracking-[-0.06em] sm:text-6xl">The room is<br />ready.</h1><p className="mt-4 max-w-md text-base leading-7 text-white/60">Share this code with your people. Everyone joins on their phone, then you choose the game.</p>
       <div className="mt-7 rounded-[2rem] border border-white/10 bg-white/[.05] p-5 sm:p-7"><div className="flex flex-wrap items-end justify-between gap-5"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-white/45">Room code</p><p className="mt-1 font-mono text-5xl font-black tracking-[.12em] text-[#d7ff3f] sm:text-6xl">{room}</p></div><button className="button-secondary">Copy invite</button></div></div>
       <div className="mt-8 flex items-center gap-3"><div className="flex -space-x-2">{players.slice(0, 4).map((player,index) => <span className={"avatar avatar-" + (index % 3)} key={player}>{player.slice(0, 1).toUpperCase()}</span>)}</div><p className="text-sm text-white/55"><strong className="text-white">{players.length} player{players.length === 1 ? "" : "s"}</strong> in the room · {players.length < 2 ? "waiting for more" : "ready to play"}</p></div>
     </div><aside className="rounded-[2rem] bg-[#f0eee8] p-5 text-[#101314] sm:p-7"><p className="eyebrow-dark">Choose a game</p><div className="mt-4 space-y-2">{games.map((game) => { const Icon = game.icon; return <button className={"game-select " + (selectedGame === game.id ? "selected" : "")} key={game.id} onClick={() => setSelectedGame(game.id)}><Icon size={19} strokeWidth={2.5} /><span>{game.title}</span>{selectedGame === game.id && <span className="pick-dot" />}</button>; })}</div>
-      <div className="mt-6 rounded-2xl bg-[#101314] p-5 text-white"><p className="text-xs font-bold uppercase tracking-[.14em] text-white/40">Selected</p><p className="mt-2 text-xl font-black">{chosenGame.title}</p><p className="mt-1 text-sm text-white/60">{chosenGame.description}</p><button className="button-lime mt-5 w-full">Start game <Play size={16} fill="currentColor" /></button></div>
+      <div className="mt-6 rounded-2xl bg-[#101314] p-5 text-white"><p className="text-xs font-bold uppercase tracking-[.14em] text-white/40">Selected</p><p className="mt-2 text-xl font-black">{chosenGame.title}</p><p className="mt-1 text-sm text-white/60">{chosenGame.description}</p>{error && <p role="alert" className="mt-4 text-sm font-bold text-rose-300">{error}</p>}<button className="button-lime mt-5 w-full" disabled={!isHost || isPlaying} onClick={onStart}>{isPlaying ? "Starting..." : isHost ? "Start game" : "Host starts the game"} <Play size={16} fill="currentColor" /></button></div>
     </aside></section></div></main>;
+}
+
+function GameScreen({ room, question, isHost, isPlaying, answerResult, error, onAnswer, onNext }: { room: string; question: GameQuestion; isHost: boolean; isPlaying: boolean; answerResult: { is_correct: boolean; points_awarded: number } | null; error: string; onAnswer: (optionId: string) => void; onNext: () => void }) {
+  const modeLabel = games.find((game) => (question.game_mode === "flag_frenzy" ? game.id === "flags" : question.game_mode === "who_am_i" ? game.id === "who" : game.id === "trivia"))?.title ?? "Game Mavelas";
+  return <main className="min-h-screen bg-[#101314] text-white"><div className="mx-auto flex min-h-screen max-w-3xl flex-col px-5 pb-10 pt-5 sm:px-8"><Topbar compact />
+    <section className="my-auto py-10"><div className="flex items-center justify-between text-sm font-bold text-white/50"><span>{modeLabel} · Round {question.position}</span><span className="font-mono text-[#d7ff3f]">{question.duration_seconds}s</span></div>
+      <div className="mt-5 rounded-[2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-9">{question.media?.type === "flag" && <img src={question.media.url} alt={question.media.alt} className="mx-auto mb-7 h-36 w-full max-w-xs rounded-2xl bg-white object-contain shadow-sm" />}
+        <p className="text-xs font-black uppercase tracking-[.16em] text-black/45">Room {room}</p><h1 className="mt-3 text-3xl font-black leading-tight tracking-[-.055em] sm:text-5xl">{question.prompt}</h1>
+        <div className="mt-7 grid gap-3 sm:grid-cols-2">{question.options.map((option) => <button key={option.id} disabled={Boolean(answerResult) || isPlaying} onClick={() => onAnswer(option.id)} className="rounded-2xl border-2 border-black/10 bg-white px-5 py-4 text-left font-black transition hover:border-[#101314] disabled:cursor-not-allowed disabled:opacity-60">{option.text}</button>)}</div>
+        {answerResult && <div className={"mt-6 rounded-2xl p-5 font-bold " + (answerResult.is_correct ? "bg-[#d7ff3f]" : "bg-rose-100 text-rose-950")}><p>{answerResult.is_correct ? `Correct! +${answerResult.points_awarded}` : "Not this one — keep your head in the game."}</p>{question.explanation && <p className="mt-2 text-sm font-medium">{question.explanation}</p>}</div>}
+        {error && <p role="alert" className="mt-5 text-sm font-bold text-rose-700">{error}</p>}
+      </div>
+      {isHost && <button className="button-lime mt-5 w-full" disabled={isPlaying} onClick={onNext}>{isPlaying ? "Loading..." : answerResult ? "Next question" : "Reveal / next question"} <ArrowRight size={17} /></button>}
+      {!isHost && <p className="mt-5 text-center text-sm text-white/55">{answerResult ? "Waiting for the host to move on…" : "Choose once — your answer is locked in."}</p>}
+    </section></div></main>;
+}
+
+function ResultsScreen({ room, players, onHome }: { room: string; players: string[]; onHome: () => void }) {
+  return <main className="min-h-screen bg-[#101314] text-white"><div className="mx-auto flex min-h-screen max-w-xl flex-col px-5 pb-10 pt-5 sm:px-8"><Topbar compact onHome={onHome} /><section className="my-auto rounded-[2rem] bg-[#f0eee8] p-8 text-center text-[#101314]"><Trophy className="mx-auto text-[#101314]" size={46} /><p className="mt-6 text-xs font-black uppercase tracking-[.16em] text-black/45">Room {room}</p><h1 className="mt-3 text-5xl font-black tracking-[-.07em]">Game over.</h1><p className="mt-4 text-black/60">The table has spoken. {players.length} player{players.length === 1 ? "" : "s"} made the leaderboard.</p><button className="button-dark mt-7 w-full" onClick={onHome}>Play again <ArrowRight size={17} /></button></section></div></main>;
 }
 
 function Topbar({ compact = false, onHome, onCreate, onJoin }: { compact?: boolean; onHome?: () => void; onCreate?: () => void; onJoin?: () => void }) {
