@@ -2,6 +2,7 @@
 -- Functions deliberately expose prompts/options, never answer keys.
 
 drop policy if exists "room members read answers" on public.player_answers;
+drop policy if exists "players read own answers" on public.player_answers;
 create policy "players read own answers" on public.player_answers for select to authenticated
   using (player_id = (select auth.uid()));
 
