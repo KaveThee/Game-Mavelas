@@ -1055,17 +1055,8 @@ function GameScreen({
                       aria-label={`Answer ${optionLetter}`}
                       disabled={hasAnswered || isRevealed || isSubmitting || (secondsRemaining !== null && secondsRemaining <= 0)}
                       onClick={() => onAnswer(option.id)}
-fix-build-conflict
                       className={`controller-pad flex min-h-32 items-center justify-center rounded-[1.5rem] px-4 py-4 text-center font-mono font-black transition disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none sm:min-h-36 ${buttonStyle}`}
                       style={{ fontSize: "clamp(5.5rem, 22vw, 9rem)", fontWeight: 900, lineHeight: 1 }}
-=======
-huge-answer-letters
-                      className={`controller-pad flex min-h-32 items-center justify-center rounded-[1.5rem] px-4 py-4 text-center font-mono font-black transition disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none sm:min-h-36 ${buttonStyle}`}
-                      style={{ fontSize: "clamp(5.5rem, 22vw, 9rem)", fontWeight: 900, lineHeight: 1 }}
-=======
-                      className={`flex min-h-32 items-center justify-center rounded-[1.5rem] px-4 py-4 text-center font-mono text-6xl font-black transition disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none sm:min-h-36 sm:text-7xl ${buttonStyle}`}
-main
-main
                     >
                       <span>{optionLetter}</span>
                     </button>
