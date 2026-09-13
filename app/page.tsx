@@ -78,7 +78,7 @@ const games = [
   },
 ];
 
-type Screen = "home" | "create" | "join" | "lobby" | "game" | "results";
+type Screen = "home" | "create" | "join" | "lobby" | "game" | "results" | "host-denied";
 
 type GameOption = {
   id: string;
@@ -132,7 +132,7 @@ type ServerGameState = {
   leaderboard: LeaderboardEntry[];
 };
 
-export default function Home() {
+export function GameController({ hostCode }: { hostCode?: string } = {}) {
   const [screen, setScreen] = useState<Screen>("home");
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
@@ -192,9 +192,77 @@ export default function Home() {
     }
   }, [liveRoomId]);
 
-  // Check URL parameters and sessionStorage for seamless refresh recovery
+  // Restore a host controller only from the dedicated /host/[code] surface.
+  // Authority is always verified against rooms.host_id on the server-facing database,
+  // never inferred from device type, screen size, or local browser state.
+  useEffect(() => {
+    if (!hostCode || !supabase) return;
+    const client = supabase;
+
+    let cancelled = false;
+    const restoreHostController = async () => {
+      setConnectionError("");
+      setRoomCode(hostCode);
+      try {
+        const user = await ensureGameIdentity();
+        const { data: roomData, error } = await client
+          .from("rooms")
+          .select("id, code, host_id")
+          .eq("code", hostCode)
+          .single();
+
+        if (error || !roomData) throw new Error("Host room not found. Check the room link.");
+        if (roomData.host_id !== user.id) {
+          if (!cancelled) setScreen("host-denied");
+          return;
+        }
+
+        // Repairs the rare partial-create case where the room exists but the host
+        // membership row was never completed. It cannot promote another player.
+        const { data: membership, error: membershipError } = await client
+          .from("room_players")
+          .select("id")
+          .eq("room_id", roomData.id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (membershipError) throw membershipError;
+        if (!membership) {
+          const fallbackName = sessionStorage.getItem("mavelas_player_name") || "Host";
+          const { error: addHostError } = await client.from("room_players").insert({
+            room_id: roomData.id,
+            user_id: user.id,
+            nickname: fallbackName.slice(0, 24),
+            role: "host",
+          });
+          if (addHostError) throw addHostError;
+        }
+
+        if (cancelled) return;
+        sessionStorage.setItem("mavelas_room_id", roomData.id);
+        setLiveRoomId(roomData.id);
+        setRoomCode(roomData.code);
+        setIsHost(true);
+        await refreshGameState(roomData.id);
+      } catch (err) {
+        if (!cancelled) {
+          setConnectionError(err instanceof Error ? err.message : "Could not restore the host controller.");
+          setScreen("host-denied");
+        }
+      }
+    };
+
+    void restoreHostController();
+    return () => {
+      cancelled = true;
+    };
+  }, [hostCode, refreshGameState]);
+
+  // Check URL parameters and sessionStorage for seamless refresh recovery.
+  // A dedicated host route always wins over a previous room saved in this browser.
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    if (hostCode) return;
 
     const params = new URLSearchParams(window.location.search);
     const codeParam = params.get("code");
@@ -210,7 +278,7 @@ export default function Home() {
       setLiveRoomId(savedRoomId);
       void refreshGameState(savedRoomId);
     }
-  }, [refreshGameState]);
+  }, [hostCode, refreshGameState]);
 
   // Realtime subscription to room changes
   useEffect(() => {
@@ -283,12 +351,10 @@ export default function Home() {
 
       sessionStorage.setItem("mavelas_room_id", created.id);
       sessionStorage.setItem("mavelas_player_name", name.trim());
-      setLiveRoomId(created.id);
-      setHostName(name.trim());
-      setRoomCode(created.code);
-      setIsHost(true);
-      await refreshGameState(created.id);
-      setScreen("lobby");
+      // A creator always continues on the explicit host-controller surface.
+      // The TV/display is opened separately at /display/[code].
+      window.location.assign(`/host/${created.code}`);
+      return;
     } catch (err) {
       setConnectionError(err instanceof Error ? err.message : "Could not create room.");
     } finally {
@@ -443,6 +509,10 @@ export default function Home() {
     setLiveRoomId("");
     setServerState(null);
     setScreen("home");
+  }
+
+  if (screen === "host-denied") {
+    return <HostAccessScreen roomCode={roomCode} error={connectionError} />;
   }
 
   // ROUTING RENDER
@@ -1195,4 +1265,25 @@ function Topbar({
       )}
     </header>
   );
+}
+
+function HostAccessScreen({ roomCode, error }: { roomCode: string; error: string }) {
+  return (
+    <main className="min-h-screen bg-[#101314] px-5 py-8 text-white sm:px-8">
+      <section className="mx-auto flex min-h-[80vh] max-w-xl flex-col justify-center">
+        <span className="eyebrow">Host controller</span>
+        <h1 className="mt-3 text-5xl font-black tracking-[-.07em]">This phone is not the host.</h1>
+        <p className="mt-5 text-lg leading-7 text-white/60">
+          Open the host link on the same phone that created room <strong className="font-mono text-[#d7ff3f]">{roomCode}</strong>.
+          The shared display has no controls by design.
+        </p>
+        {error && <p role="alert" className="mt-5 rounded-2xl bg-rose-500/10 p-4 text-sm font-bold text-rose-300">{error}</p>}
+        <a href="/" className="button-lime mt-8 w-fit">Return to Game Mavelas</a>
+      </section>
+    </main>
+  );
+}
+
+export default function Home() {
+  return <GameController />;
 }
