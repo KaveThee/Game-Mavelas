@@ -6,20 +6,13 @@ import {
   Check,
   CheckCircle2,
   Clock,
-  Copy,
   Crown,
-  ExternalLink,
-  Eye,
   Gamepad2,
   ImageIcon,
   LogOut,
   MapPinned,
-  Monitor,
-  Play,
   Plus,
-  RotateCcw,
   ScanLine,
-  SkipForward,
   Sparkles,
   Trophy,
   Users,
@@ -35,9 +28,9 @@ const games = [
     icon: Sparkles,
     color: "pink",
     template: "trivia_rush_classic",
-    description: "Rapid-fire quiz on Kenyan and African history, science, geography, and pop culture.",
+    description: "Rapid-fire quiz on Kenyan and African history, science, geography, and culture.",
     meta: "8 categories · 15 questions · Fast rounds",
-    instructions: "Questions will appear on the big screen and your phone. Choose the correct answer before time runs out!",
+    instructions: "Questions appear on the shared TV screen and your phone. Tap the right option before time runs out!",
     isSupported: true,
   },
   {
@@ -49,7 +42,7 @@ const games = [
     template: "flag_frenzy_africa",
     description: "Spot the country from its flag before the countdown runs down.",
     meta: "Africa & East Africa · 10 rounds · 12s per flag",
-    instructions: "A flag will display on the screen. Tap the matching country name as fast as you can to score points!",
+    instructions: "A flag will display on the screen. Tap the matching country name as fast as you can!",
     isSupported: true,
   },
   {
@@ -59,7 +52,7 @@ const games = [
     icon: ImageIcon,
     color: "lime",
     template: "who_am_i_kenya",
-    description: "Guess your secret identity while the table gives yes-or-no clues.",
+    description: "Guess your secret identity while the table gives clues.",
     meta: "Kenyan Icons · Coming Phase 4",
     instructions: "Everyone knows who you are except you. Ask the table questions to work out your identity.",
     isSupported: false,
@@ -115,7 +108,7 @@ type LeaderboardEntry = {
   is_host: boolean;
 };
 
-type ServerGameState = {
+type PlayerGameState = {
   room_id: string;
   room_code: string;
   status: string;
@@ -140,17 +133,14 @@ export default function Home() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState("");
   const [liveRoomId, setLiveRoomId] = useState("");
-  const [isHost, setIsHost] = useState(false);
-  const [hostName, setHostName] = useState("");
-  const [serverState, setServerState] = useState<ServerGameState | null>(null);
+  const [playerState, setPlayerState] = useState<PlayerGameState | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
 
-  const room = useMemo(() => serverState?.room_code || roomCode || "MAV1", [serverState?.room_code, roomCode]);
+  const room = useMemo(() => playerState?.room_code || roomCode || "MAV1", [playerState?.room_code, roomCode]);
   const chosenGame = games.find((g) => g.id === selectedGame) ?? games[0];
 
-  // Refresh Game State from Server Authority
+  // Refresh Player State from Server
   const refreshGameState = useCallback(async (roomId?: string) => {
     const id = roomId || liveRoomId;
     if (!id || !supabase) return;
@@ -160,9 +150,8 @@ export default function Home() {
       const { data, error } = await supabase.rpc("get_player_game_state", { p_room_id: id });
 
       if (error) {
-        // Room may no longer exist
         if (error.message.includes("Room not found") || error.message.includes("not a player")) {
-          sessionStorage.removeItem("mavelas_room_id");
+          sessionStorage.removeItem("mavelas_player_room_id");
           setLiveRoomId("");
           setScreen("home");
         }
@@ -170,13 +159,16 @@ export default function Home() {
       }
 
       if (data) {
-        const state = data as ServerGameState;
-        setServerState(state);
-        setIsHost(state.is_host);
-        setHostName(state.host_name);
+        const state = data as PlayerGameState;
+        setPlayerState(state);
         if (state.room_code) setRoomCode(state.room_code);
 
-        // Sync selected game if in lobby
+        // If this user was the host on the player controller route, redirect to the explicit Host Controller!
+        if (state.is_host) {
+          window.location.href = `/host/${state.room_code}`;
+          return;
+        }
+
         if (state.status === "lobby") {
           const matched = games.find((g) => g.id === state.selected_game || g.template === state.selected_game);
           if (matched) setSelectedGame(matched.id);
@@ -192,7 +184,7 @@ export default function Home() {
     }
   }, [liveRoomId]);
 
-  // Check URL parameters and sessionStorage for seamless refresh recovery
+  // Read URL param ?code=ABCD and session persistence
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -203,16 +195,16 @@ export default function Home() {
       setScreen("join");
     }
 
-    const savedRoomId = sessionStorage.getItem("mavelas_room_id");
+    const savedRoomId = sessionStorage.getItem("mavelas_player_room_id");
     const savedName = sessionStorage.getItem("mavelas_player_name");
     if (savedName) setName(savedName);
-    if (savedRoomId) {
+    if (savedRoomId && !codeParam) {
       setLiveRoomId(savedRoomId);
       void refreshGameState(savedRoomId);
     }
   }, [refreshGameState]);
 
-  // Realtime subscription to room changes
+  // Realtime subscription for player controller
   useEffect(() => {
     if (!liveRoomId || !supabase) return;
     const client = supabase;
@@ -220,7 +212,7 @@ export default function Home() {
     void refreshGameState();
 
     const channel = client
-      .channel("room-player-" + liveRoomId)
+      .channel("player-controller-" + liveRoomId)
       .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: "id=eq." + liveRoomId }, () => {
         void refreshGameState();
       })
@@ -240,16 +232,15 @@ export default function Home() {
     };
   }, [liveRoomId, refreshGameState]);
 
-  // Synchronized countdown timer for player controller
+  // Synchronized countdown timer
   useEffect(() => {
-    const round = serverState?.current_question;
-    if (!round?.closes_at || serverState?.phase !== "playing") {
+    const round = playerState?.current_question;
+    if (!round?.closes_at || playerState?.phase !== "playing") {
       setSecondsRemaining(null);
       return;
     }
 
     const targetTime = new Date(round.closes_at).getTime();
-
     const updateTimer = () => {
       const now = Date.now();
       const diff = Math.max(0, Math.ceil((targetTime - now) / 1000));
@@ -259,8 +250,9 @@ export default function Home() {
     updateTimer();
     const interval = setInterval(updateTimer, 500);
     return () => clearInterval(interval);
-  }, [serverState?.current_question?.closes_at, serverState?.phase, serverState?.current_question?.position]);
+  }, [playerState?.current_question?.closes_at, playerState?.phase, playerState?.current_question?.position]);
 
+  // CREATE ROOM: Immediately routes the creator device to /host/[code]
   async function createLiveRoom() {
     setConnectionError("");
     setIsConnecting(true);
@@ -281,21 +273,15 @@ export default function Home() {
         .insert({ room_id: created.id, user_id: user.id, nickname: name.trim(), role: "host" });
       if (playerError) throw playerError;
 
-      sessionStorage.setItem("mavelas_room_id", created.id);
-      sessionStorage.setItem("mavelas_player_name", name.trim());
-      setLiveRoomId(created.id);
-      setHostName(name.trim());
-      setRoomCode(created.code);
-      setIsHost(true);
-      await refreshGameState(created.id);
-      setScreen("lobby");
+      // EXPLICIT SURFACE ROUTING: The host device routes directly to /host/[code]!
+      window.location.href = `/host/${created.code}`;
     } catch (err) {
       setConnectionError(err instanceof Error ? err.message : "Could not create room.");
-    } finally {
       setIsConnecting(false);
     }
   }
 
+  // JOIN ROOM: Joins as player only and remains on player controller surface
   async function joinLiveRoom() {
     setConnectionError("");
     setIsConnecting(true);
@@ -311,12 +297,18 @@ export default function Home() {
       if (lookupError || !roomData) throw new Error("Room not found. Check the code and try again.");
       if (roomData.status === "closed") throw new Error("This room is closed.");
 
+      // Check if this user is actually the host returning
+      if (roomData.host_id === user.id) {
+        window.location.href = `/host/${roomData.code}`;
+        return;
+      }
+
       const { error: playerError } = await supabase
         .from("room_players")
         .upsert({ room_id: roomData.id, user_id: user.id, nickname: name.trim(), role: "player" }, { onConflict: "room_id,user_id" });
       if (playerError) throw playerError;
 
-      sessionStorage.setItem("mavelas_room_id", roomData.id);
+      sessionStorage.setItem("mavelas_player_room_id", roomData.id);
       sessionStorage.setItem("mavelas_player_name", name.trim());
       setLiveRoomId(roomData.id);
       setRoomCode(roomData.code);
@@ -329,46 +321,14 @@ export default function Home() {
     }
   }
 
-  async function handleSelectGame(gameId: string) {
-    setSelectedGame(gameId);
-    if (isHost && liveRoomId && supabase) {
-      await supabase.from("rooms").update({ selected_game: gameId }).eq("id", liveRoomId);
-    }
-  }
-
-  async function handleStartGame() {
-    const game = games.find((g) => g.id === selectedGame);
-    if (!game || !game.template) {
-      setConnectionError("Please choose Trivia Rush or Flag Frenzy for Phase 3.");
-      return;
-    }
-    if (!supabase || !liveRoomId) return;
-
-    setConnectionError("");
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase.rpc("start_game", {
-        p_room_id: liveRoomId,
-        p_template_code: game.template,
-      });
-      if (error) throw error;
-      await refreshGameState();
-      setScreen("game");
-    } catch (err) {
-      setConnectionError(err instanceof Error ? err.message : "Could not start game.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   async function handleSubmitAnswer(optionId: string) {
-    if (!supabase || !serverState?.current_question?.round_id || isSubmitting) return;
+    if (!supabase || !playerState?.current_question?.round_id || isSubmitting) return;
 
     setConnectionError("");
     setIsSubmitting(true);
     try {
       const { error } = await supabase.rpc("submit_game_answer", {
-        p_round_id: serverState.current_question.round_id,
+        p_round_id: playerState.current_question.round_id,
         p_option_id: optionId,
       });
       if (error) throw error;
@@ -380,141 +340,307 @@ export default function Home() {
     }
   }
 
-  // Host Actions
-  async function handleHostReveal() {
-    if (!supabase || !liveRoomId || isSubmitting) return;
-    setConnectionError("");
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase.rpc("host_reveal_round", { p_room_id: liveRoomId });
-      if (error) throw error;
-      await refreshGameState();
-    } catch (err) {
-      setConnectionError(err instanceof Error ? err.message : "Could not reveal round.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleHostAdvance() {
-    if (!supabase || !liveRoomId || isSubmitting) return;
-    setConnectionError("");
-    setIsSubmitting(true);
-    try {
-      const { data, error } = await supabase.rpc("host_advance_round", { p_room_id: liveRoomId });
-      if (error) throw error;
-      if ((data as { finished?: boolean }).finished) {
-        setScreen("results");
-      }
-      await refreshGameState();
-    } catch (err) {
-      setConnectionError(err instanceof Error ? err.message : "Could not advance round.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleHostEndGame() {
-    if (!supabase || !liveRoomId || isSubmitting) return;
-    setConnectionError("");
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase.rpc("host_end_game", { p_room_id: liveRoomId });
-      if (error) throw error;
-      await refreshGameState();
-      setScreen("results");
-    } catch (err) {
-      setConnectionError(err instanceof Error ? err.message : "Could not end game.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  function handleCopyInvite() {
-    if (typeof window === "undefined") return;
-    const url = `${window.location.origin}/?code=${room}`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  }
-
   function handleLeaveRoom() {
-    sessionStorage.removeItem("mavelas_room_id");
+    sessionStorage.removeItem("mavelas_player_room_id");
     setLiveRoomId("");
-    setServerState(null);
+    setPlayerState(null);
     setScreen("home");
   }
 
-  // ROUTING RENDER
+  // PLAYER CONTROLLER VIEWS
 
-  if (screen === "game" && serverState) {
+  if (screen === "game" && playerState) {
+    const question = playerState.current_question;
+    const myAnswer = playerState.my_answer;
+    const isRevealed = playerState.phase === "revealed" || myAnswer.is_revealed;
+    const hasAnswered = myAnswer.has_answered;
+
     return (
-      <GameScreen
-        state={serverState}
-        secondsRemaining={secondsRemaining}
-        isSubmitting={isSubmitting}
-        error={connectionError}
-        onAnswer={handleSubmitAnswer}
-        onReveal={handleHostReveal}
-        onNext={handleHostAdvance}
-        onEndGame={handleHostEndGame}
-      />
+      <main className="min-h-screen bg-[#101314] text-white">
+        <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-5 pb-12 pt-6 sm:px-8">
+          {/* Header */}
+          <header className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div>
+              <span className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">
+                {chosenGame.title} · Round {question?.position} of {question?.total_rounds || 10}
+              </span>
+              <p className="text-sm text-white/50">Score: <strong className="text-white font-mono">{playerState.my_score} pts</strong></p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {secondsRemaining !== null && !isRevealed && (
+                <div
+                  className={`flex items-center gap-1.5 rounded-xl px-3 py-1 font-mono text-base font-black ${
+                    secondsRemaining <= 5 ? "bg-rose-500/20 text-rose-400 animate-pulse" : "bg-white/10 text-[#d7ff3f]"
+                  }`}
+                >
+                  <Clock size={16} />
+                  <span>{secondsRemaining}s</span>
+                </div>
+              )}
+              <span className="rounded-xl border border-white/15 bg-white/[.06] px-3 py-1 font-mono text-xs font-bold text-white/80">
+                {playerState.room_code}
+              </span>
+            </div>
+          </header>
+
+          {/* Question & Options Area */}
+          <section className="my-auto py-6">
+            {question ? (
+              <div className="rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-8 shadow-2xl">
+                {question.media?.type === "flag" && (
+                  <div className="mx-auto mb-6 flex justify-center">
+                    <img
+                      src={question.media.url}
+                      alt={question.media.alt}
+                      className="h-32 w-auto max-w-xs rounded-2xl bg-white object-contain p-3 shadow-md border-2 border-black/10"
+                    />
+                  </div>
+                )}
+
+                <p className="text-xs font-black uppercase tracking-[.16em] text-black/45">
+                  {isRevealed ? "Round Reveal" : "Choose your answer"}
+                </p>
+                <h1 className="mt-2 text-2xl font-black leading-tight tracking-[-0.04em] sm:text-3xl">
+                  {question.prompt}
+                </h1>
+
+                {/* Options Grid */}
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {question.options.map((option) => {
+                    const isSelected = myAnswer.selected_option_id === option.id;
+                    const isCorrect = isRevealed && myAnswer.correct_option_id === option.id;
+                    const isWrongSelected = isRevealed && isSelected && !myAnswer.is_correct;
+
+                    let buttonStyle = "border-2 border-black/15 bg-white text-black hover:border-black";
+                    if (isCorrect) {
+                      buttonStyle = "border-2 border-emerald-600 bg-emerald-100 text-emerald-950 font-black shadow";
+                    } else if (isWrongSelected) {
+                      buttonStyle = "border-2 border-rose-500 bg-rose-100 text-rose-950 line-through opacity-80";
+                    } else if (isSelected) {
+                      buttonStyle = "border-2 border-[#101314] bg-[#101314] text-[#d7ff3f] shadow-md";
+                    }
+
+                    return (
+                      <button
+                        key={option.id}
+                        disabled={hasAnswered || isRevealed || isSubmitting || (secondsRemaining !== null && secondsRemaining <= 0)}
+                        onClick={() => handleSubmitAnswer(option.id)}
+                        className={`flex items-center justify-between rounded-2xl px-5 py-4 text-left font-black transition disabled:cursor-not-allowed ${buttonStyle}`}
+                      >
+                        <span>{option.text}</span>
+                        {isSelected && !isRevealed && <Check size={18} />}
+                        {isCorrect && <CheckCircle2 size={18} className="text-emerald-700" />}
+                        {isWrongSelected && <XCircle size={18} className="text-rose-600" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Answer Locked Message */}
+                {hasAnswered && !isRevealed && (
+                  <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl bg-black/[.06] p-4 text-center">
+                    <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
+                    <p className="text-sm font-bold text-black/70">
+                      Answer locked in — waiting for {playerState.host_name || "the host"} to reveal…
+                    </p>
+                  </div>
+                )}
+
+                {/* Time Expired */}
+                {!hasAnswered && !isRevealed && secondsRemaining === 0 && (
+                  <div className="mt-6 rounded-2xl bg-rose-100 p-4 text-center text-sm font-bold text-rose-900">
+                    Time is up for this question!
+                  </div>
+                )}
+
+                {/* Post-Reveal Feedback */}
+                {isRevealed && (
+                  <div
+                    className={`mt-6 rounded-2xl p-5 shadow-sm transition ${
+                      myAnswer.is_correct
+                        ? "bg-[#d7ff3f] text-[#101314]"
+                        : hasAnswered
+                        ? "bg-rose-100 text-rose-950"
+                        : "bg-black/10 text-black"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-lg font-black">
+                        {myAnswer.is_correct
+                          ? `Correct! +${myAnswer.points_awarded || 100} pts`
+                          : hasAnswered
+                          ? "Not this one!"
+                          : "Did not answer in time"}
+                      </p>
+                      <span className="font-mono text-sm font-bold">Total: {playerState.my_score} pts</span>
+                    </div>
+                    {myAnswer.explanation && (
+                      <p className="mt-2 text-sm font-medium leading-relaxed opacity-90">{myAnswer.explanation}</p>
+                    )}
+                  </div>
+                )}
+
+                {connectionError && <p role="alert" className="mt-4 text-sm font-bold text-rose-700">{connectionError}</p>}
+              </div>
+            ) : (
+              <div className="rounded-[2.2rem] bg-[#f0eee8] p-10 text-center text-black">
+                <p className="text-lg font-bold">Waiting for round to load…</p>
+              </div>
+            )}
+
+            <p className="mt-6 text-center text-xs text-white/50">
+              {isRevealed
+                ? `Waiting for ${playerState.host_name || "the host"} to load the next question…`
+                : "Your phone is your controller. Answers are locked once tapped."}
+            </p>
+          </section>
+        </div>
+      </main>
     );
   }
 
-  if (screen === "results" && serverState) {
+  // PLAYER RESULTS SCREEN
+  if (screen === "results" && playerState) {
     return (
-      <ResultsScreen
-        room={room}
-        isHost={isHost}
-        leaderboard={serverState.leaderboard}
-        onPlayAgain={isHost ? () => setScreen("lobby") : undefined}
-        onHome={handleLeaveRoom}
-      />
+      <main className="min-h-screen bg-[#101314] text-white">
+        <div className="mx-auto flex min-h-screen max-w-xl flex-col px-5 pb-10 pt-6 sm:px-8">
+          <Topbar compact onHome={handleLeaveRoom} />
+          <section className="my-auto rounded-[2.2rem] bg-[#f0eee8] p-8 text-center text-[#101314] shadow-2xl">
+            <Trophy className="mx-auto text-[#101314]" size={56} />
+            <p className="mt-6 text-xs font-black uppercase tracking-[.16em] text-black/45">Room {room}</p>
+            <h1 className="mt-2 text-5xl font-black tracking-[-0.07em]">Game Over!</h1>
+            <p className="mt-3 text-sm text-black/60">Final Standings:</p>
+
+            <div className="mt-7 space-y-2 text-left">
+              {playerState.leaderboard.map((entry, index) => (
+                <div
+                  key={entry.name + index}
+                  className={`flex items-center justify-between rounded-xl px-4 py-3 ${
+                    index === 0
+                      ? "bg-[#d7ff3f] font-black shadow"
+                      : entry.is_me
+                      ? "bg-black/15 font-bold"
+                      : "bg-black/[.05]"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-xs font-bold text-[#d7ff3f]">
+                      {index + 1}
+                    </span>
+                    <span>{entry.name}</span>
+                    {entry.is_me && <span className="text-[10px] uppercase font-bold text-black/60">(You)</span>}
+                  </div>
+                  <span className="font-mono font-black">{entry.score} pts</span>
+                </div>
+              ))}
+            </div>
+
+            <button className="button-dark mt-8 w-full py-3 text-sm font-bold" onClick={handleLeaveRoom}>
+              Exit Room
+            </button>
+          </section>
+        </div>
+      </main>
     );
   }
 
-  if (screen === "lobby") {
-    const playersList = serverState?.leaderboard.map((p) => p.name) || (name ? [name] : []);
+  // PLAYER LOBBY (WAITING FOR HOST)
+  if (screen === "lobby" && playerState) {
     return (
-      <Lobby
-        room={room}
-        players={playersList}
-        hostName={hostName || (isHost ? name : "Host")}
-        selectedGame={selectedGame}
-        setSelectedGame={handleSelectGame}
-        chosenGame={chosenGame}
-        isHost={isHost}
-        isPlaying={isSubmitting}
-        copied={copied}
-        onCopyInvite={handleCopyInvite}
-        error={connectionError}
-        onStart={handleStartGame}
-        onLeave={handleLeaveRoom}
-        onHome={handleLeaveRoom}
-      />
+      <main className="min-h-screen bg-[#101314] text-white">
+        <div className="mx-auto flex min-h-screen max-w-xl flex-col px-5 pb-10 pt-6 sm:px-8">
+          <Topbar compact onHome={handleLeaveRoom} />
+
+          <section className="my-auto">
+            <div className="rounded-[2.2rem] bg-[#f0eee8] p-7 text-[#101314] shadow-2xl">
+              <span className="eyebrow-dark">Player Controller</span>
+              <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
+                You’re in {playerState.host_name}’s Room.
+              </h1>
+              <p className="mt-2 text-sm text-black/60">
+                Waiting for <strong>{playerState.host_name}</strong> to start the game. Keep this screen open.
+              </p>
+
+              {/* Selected Deck View */}
+              <div className="mt-6 rounded-2xl bg-[#101314] p-5 text-white shadow-md">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#d7ff3f] text-[#101314]">
+                    <Gamepad2 size={20} />
+                  </span>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[.14em] text-white/40">Deck Selected</p>
+                    <p className="text-xl font-black">{chosenGame.title}</p>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-white/70">{chosenGame.description}</p>
+                <div className="mt-4 border-t border-white/10 pt-3">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-[#d7ff3f]">How to play</p>
+                  <p className="mt-1 text-xs text-white/60">{chosenGame.instructions}</p>
+                </div>
+              </div>
+
+              {/* Connected Roster */}
+              <div className="mt-6 rounded-2xl border-2 border-black/10 bg-white/70 p-5">
+                <div className="flex items-center justify-between pb-3 border-b border-black/10">
+                  <p className="text-xs font-black uppercase tracking-[.14em] text-black/50">
+                    Players in Room ({playerState.leaderboard.length})
+                  </p>
+                  <span className="text-xs text-emerald-700 font-bold flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Connected
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {playerState.leaderboard.map((p) => (
+                    <div
+                      key={p.name}
+                      className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold ${
+                        p.is_host ? "bg-[#101314] text-[#d7ff3f]" : "bg-black/10 text-black"
+                      }`}
+                    >
+                      {p.is_host && <Crown size={13} fill="currentColor" />}
+                      <span>{p.name}</span>
+                      {p.is_me && <span className="text-[10px] opacity-60">(You)</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <button
+                  onClick={handleLeaveRoom}
+                  className="flex items-center justify-center gap-2 w-full text-xs font-bold uppercase tracking-wider text-black/40 hover:text-rose-600 transition py-2"
+                >
+                  <LogOut size={14} /> Leave Room
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
     );
   }
 
+  // CREATE / JOIN FORM
   if (screen === "create" || screen === "join") {
     const isCreate = screen === "create";
     return (
       <main className="min-h-screen bg-[#101314] text-white">
-        <div className="mx-auto flex min-h-screen max-w-xl flex-col px-5 pb-10 pt-5 sm:px-8">
+        <div className="mx-auto flex min-h-screen max-w-xl flex-col px-5 pb-10 pt-6 sm:px-8">
           <Topbar compact onHome={() => setScreen("home")} />
           <section className="my-auto rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-9 shadow-2xl">
             <span className="eyebrow-dark">{isCreate ? "Host a session" : "Join the table"}</span>
             <h1 className="mt-3 text-4xl font-black tracking-[-0.06em]">
-              {isCreate ? "Start the vibe." : "You are invited."}
+              {isCreate ? "Host the room." : "You are invited."}
             </h1>
             <p className="mt-3 text-[15px] leading-6 text-black/60">
               {isCreate
-                ? "Make a room. Connect your TV and phones together."
-                : "Enter your nickname to join the room and controller."}
+                ? "Create a room and get instant host controls on this phone."
+                : "Enter your nickname to join the room controller."}
             </p>
 
             <label className="field-label mt-7" htmlFor="name">
-              Your game name
+              Your nickname
             </label>
             <input
               id="name"
@@ -543,11 +669,12 @@ export default function Home() {
             {connectionError && <p role="alert" className="mt-4 text-sm font-bold text-rose-700">{connectionError}</p>}
 
             <button
-              className="button-dark mt-7 w-full"
+              className="button-dark mt-7 w-full flex items-center justify-center gap-2"
               disabled={!name.trim() || (!isCreate && roomCode.length < 4) || isConnecting}
               onClick={isCreate ? createLiveRoom : joinLiveRoom}
             >
-              {isConnecting ? "Connecting..." : isCreate ? "Create room" : "Join room"} <ArrowRight size={18} />
+              {isConnecting ? "Connecting..." : isCreate ? "Create Room & Host" : "Join Game Table"}{" "}
+              <ArrowRight size={18} />
             </button>
 
             <button
@@ -562,11 +689,11 @@ export default function Home() {
     );
   }
 
-  // Home Screen
+  // HOME SCREEN
   return (
     <main className="min-h-screen overflow-hidden bg-[#101314] text-white">
       <div className="noise" />
-      <div className="mx-auto max-w-6xl px-5 pb-12 pt-5 sm:px-8">
+      <div className="mx-auto max-w-6xl px-5 pb-12 pt-6 sm:px-8">
         <Topbar onCreate={() => setScreen("create")} onJoin={() => setScreen("join")} />
 
         <section className="grid min-h-[500px] items-center gap-10 py-16 lg:grid-cols-[1.15fr_.85fr] lg:py-20">
@@ -577,14 +704,14 @@ export default function Home() {
               <span className="text-[#d7ff3f]">TABLE</span> TALK.
             </h1>
             <p className="mt-7 max-w-lg text-lg leading-7 text-white/60">
-              Kenyan & African-rooted party games. Big screen for the room, smartphones for the controllers.
+              Three-surface party platform: host on your phone, join with friends, cast the display to your TV.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <button className="button-lime" onClick={() => setScreen("create")}>
-                Create a game <Plus size={18} />
+                Host a Game <Plus size={18} />
               </button>
               <button className="button-secondary" onClick={() => setScreen("join")}>
-                Join with code <ArrowRight size={17} />
+                Join with Code <ArrowRight size={17} />
               </button>
             </div>
             <div className="mt-10 flex items-center gap-5 text-sm text-white/45">
@@ -592,7 +719,7 @@ export default function Home() {
                 <Users size={16} /> 2–12 players
               </span>
               <span className="flex items-center gap-2">
-                <Gamepad2 size={16} /> Realtime controllers
+                <Gamepad2 size={16} /> Phones as controllers
               </span>
             </div>
           </div>
@@ -609,7 +736,7 @@ export default function Home() {
               <div className="my-5 flex items-center justify-center rounded-2xl bg-white p-4 shadow-sm">
                 <img
                   src="https://flagcdn.com/ke.svg"
-                  alt="Kenya flag preview"
+                  alt="Kenya flag"
                   className="h-28 w-auto object-contain shadow"
                 />
               </div>
@@ -624,9 +751,6 @@ export default function Home() {
                 </button>
               </div>
             </div>
-            <div className="absolute -right-2 -top-6 rounded-2xl bg-[#ff4fa3] px-4 py-2.5 font-black text-[#101314] shadow-lg">
-              Live Engine Ready!
-            </div>
           </div>
         </section>
 
@@ -636,7 +760,7 @@ export default function Home() {
               <p className="eyebrow">Playable decks</p>
               <h2 className="mt-2 text-3xl font-black tracking-[-.06em]">Party Modes</h2>
             </div>
-            <span className="text-sm text-[#d7ff3f] font-bold">Phase 3 Live</span>
+            <span className="text-sm text-[#d7ff3f] font-bold">Phase 3.1 Architecture</span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {games.map((game) => {
@@ -661,502 +785,6 @@ export default function Home() {
                 </article>
               );
             })}
-          </div>
-        </section>
-
-        <section className="mt-12 rounded-[2rem] bg-white/[.06] p-6 sm:flex sm:items-center sm:justify-between sm:p-8">
-          <div className="flex items-center gap-4">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#d7ff3f] text-[#101314]">
-              <Trophy size={24} />
-            </div>
-            <div>
-              <p className="font-black">Two Surfaces. One Table.</p>
-              <p className="text-sm text-white/55">Cast to the TV, keep phone controllers in hand.</p>
-            </div>
-          </div>
-          <button className="button-secondary mt-5 sm:mt-0" onClick={() => setScreen("create")}>
-            Host tonight <Crown size={17} />
-          </button>
-        </section>
-      </div>
-    </main>
-  );
-}
-
-// LOBBY COMPONENT
-function Lobby({
-  room,
-  players,
-  hostName,
-  selectedGame,
-  setSelectedGame,
-  chosenGame,
-  isHost,
-  isPlaying,
-  copied,
-  onCopyInvite,
-  error,
-  onStart,
-  onLeave,
-  onHome,
-}: {
-  room: string;
-  players: string[];
-  hostName: string;
-  selectedGame: string;
-  setSelectedGame: (id: string) => void;
-  chosenGame: typeof games[number];
-  isHost: boolean;
-  isPlaying: boolean;
-  copied: boolean;
-  onCopyInvite: () => void;
-  error: string;
-  onStart: () => void;
-  onLeave: () => void;
-  onHome: () => void;
-}) {
-  const displayUrl = `/display/${room}`;
-
-  return (
-    <main className="min-h-screen bg-[#101314] text-white">
-      <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-5 pb-10 pt-5 sm:px-8">
-        <Topbar compact onHome={onHome} />
-
-        <section className="mt-10 grid gap-8 lg:grid-cols-[1.2fr_.8fr] lg:items-start">
-          <div>
-            <span className="eyebrow">{isHost ? "Host Console" : "Player Controller"}</span>
-            <h1 className="mt-3 text-4xl font-black tracking-[-0.06em] sm:text-6xl">
-              {isHost ? "The room is\nready." : `You're in ${hostName || "Host"}'s\nroom.`}
-            </h1>
-            <p className="mt-4 max-w-md text-base leading-7 text-white/60">
-              {isHost
-                ? "Select a playable deck (Trivia Rush or Flag Frenzy), open the shared TV screen, and start when ready."
-                : `Waiting for ${hostName || "the host"} to start the game. Keep this phone open.`}
-            </p>
-
-            <div className="mt-7 rounded-[2rem] border border-white/10 bg-white/[.05] p-5 sm:p-7 shadow-lg">
-              <div className="flex flex-wrap items-end justify-between gap-5">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[.16em] text-white/45">Room code</p>
-                  <p className="mt-1 font-mono text-5xl font-black tracking-[.12em] text-[#d7ff3f] sm:text-6xl">{room}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button className="button-secondary text-sm" onClick={onCopyInvite}>
-                    {copied ? <Check size={16} className="text-[#d7ff3f]" /> : <Copy size={16} />}
-                    {copied ? "Copied!" : "Copy link"}
-                  </button>
-                  {isHost && (
-                    <a
-                      href={displayUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="button-lime text-sm flex items-center gap-2"
-                    >
-                      <Monitor size={16} /> Open TV Display <ExternalLink size={14} />
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 rounded-2xl border border-white/10 bg-white/[.03] p-5">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <p className="text-xs font-black uppercase tracking-[.14em] text-white/50">
-                  Players at table ({players.length})
-                </p>
-                <span className="text-xs text-[#d7ff3f] font-bold">
-                  {players.length < 2 ? "Waiting for players" : "Ready to play"}
-                </span>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2.5">
-                {players.map((player) => {
-                  const isPlayerHost = player === hostName;
-                  return (
-                    <div
-                      key={player}
-                      className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-bold ${
-                        isPlayerHost ? "bg-[#d7ff3f] text-[#101314]" : "bg-white/10 text-white"
-                      }`}
-                    >
-                      {isPlayerHost && <Crown size={15} fill="currentColor" />}
-                      <span>{player}</span>
-                      {isPlayerHost && (
-                        <span className="text-[11px] font-black uppercase tracking-wider opacity-70">Host</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-center gap-3">
-              <button
-                onClick={onLeave}
-                className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/40 hover:text-rose-400 transition"
-              >
-                <LogOut size={14} /> Leave room
-              </button>
-            </div>
-          </div>
-
-          <aside className="rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-7 shadow-2xl">
-            {isHost ? (
-              <>
-                <p className="eyebrow-dark">Select Game Mode</p>
-                <div className="mt-4 space-y-2">
-                  {games.map((game) => {
-                    const Icon = game.icon;
-                    return (
-                      <button
-                        className={`game-select ${selectedGame === game.id ? "selected" : ""} ${
-                          !game.isSupported ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                        key={game.id}
-                        disabled={!game.isSupported}
-                        onClick={() => setSelectedGame(game.id)}
-                      >
-                        <Icon size={19} strokeWidth={2.5} />
-                        <span>{game.title}</span>
-                        {!game.isSupported ? (
-                          <span className="text-[10px] font-bold text-black/40">Phase 4</span>
-                        ) : selectedGame === game.id ? (
-                          <span className="pick-dot" />
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-6 rounded-2xl bg-[#101314] p-5 text-white shadow-lg">
-                  <p className="text-xs font-bold uppercase tracking-[.14em] text-white/40">Active Deck</p>
-                  <p className="mt-2 text-xl font-black">{chosenGame.title}</p>
-                  <p className="mt-1 text-sm text-white/60">{chosenGame.description}</p>
-                  <p className="mt-3 text-xs text-[#d7ff3f] font-bold">{chosenGame.meta}</p>
-
-                  {error && <p role="alert" className="mt-4 text-sm font-bold text-rose-300">{error}</p>}
-
-                  <button
-                    className="button-lime mt-5 w-full flex items-center justify-center gap-2"
-                    disabled={isPlaying || !chosenGame.isSupported}
-                    onClick={onStart}
-                  >
-                    <Play size={16} fill="currentColor" />
-                    {isPlaying ? "Launching..." : "Start Game"}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div>
-                <p className="eyebrow-dark">Active Session</p>
-                <div className="mt-4 rounded-2xl bg-[#101314] p-6 text-white shadow-md">
-                  <div className="flex items-center gap-3">
-                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#d7ff3f] text-[#101314]">
-                      <Gamepad2 size={20} />
-                    </span>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-[.14em] text-white/40">Selected by Host</p>
-                      <p className="text-xl font-black">{chosenGame.title}</p>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-sm leading-6 text-white/70">{chosenGame.description}</p>
-                  <div className="mt-5 border-t border-white/10 pt-4">
-                    <p className="text-xs font-black uppercase tracking-[.14em] text-[#d7ff3f]">How to play</p>
-                    <p className="mt-1.5 text-xs leading-5 text-white/60">{chosenGame.instructions}</p>
-                  </div>
-                </div>
-
-                <div className="mt-6 rounded-2xl border-2 border-black/10 bg-white/60 p-5 text-center">
-                  <div className="inline-block h-3 w-3 rounded-full bg-emerald-500 animate-pulse mr-2" />
-                  <span className="text-sm font-bold text-black/70">Connected as player</span>
-                  <p className="mt-2 text-xs text-black/50">
-                    Questions will appear here. Waiting for {hostName || "the host"} to start.
-                  </p>
-                </div>
-                {error && <p role="alert" className="mt-4 text-sm font-bold text-rose-700">{error}</p>}
-              </div>
-            )}
-          </aside>
-        </section>
-      </div>
-    </main>
-  );
-}
-
-// PLAYABLE CONTROLLER SCREEN
-function GameScreen({
-  state,
-  secondsRemaining,
-  isSubmitting,
-  error,
-  onAnswer,
-  onReveal,
-  onNext,
-  onEndGame,
-}: {
-  state: ServerGameState;
-  secondsRemaining: number | null;
-  isSubmitting: boolean;
-  error: string;
-  onAnswer: (optionId: string) => void;
-  onReveal: () => void;
-  onNext: () => void;
-  onEndGame: () => void;
-}) {
-  const question = state.current_question;
-  const myAnswer = state.my_answer;
-  const isHost = state.is_host;
-  const isRevealed = state.phase === "revealed" || myAnswer.is_revealed;
-  const hasAnswered = myAnswer.has_answered;
-
-  const modeLabel =
-    games.find((g) => g.template === question?.game_mode || g.id === question?.game_mode)?.title || "Game Mavelas";
-
-  return (
-    <main className="min-h-screen bg-[#101314] text-white">
-      <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-5 pb-12 pt-5 sm:px-8">
-        {/* Game Header */}
-        <header className="flex items-center justify-between border-b border-white/10 pb-4">
-          <div>
-            <span className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">
-              {modeLabel} · Round {question?.position} of {question?.total_rounds || 10}
-            </span>
-            <p className="text-sm text-white/50">Score: <strong className="text-white font-mono">{state.my_score} pts</strong></p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {secondsRemaining !== null && !isRevealed && (
-              <div
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-mono text-lg font-black ${
-                  secondsRemaining <= 5 ? "bg-rose-500/20 text-rose-400 animate-pulse" : "bg-white/10 text-[#d7ff3f]"
-                }`}
-              >
-                <Clock size={16} />
-                <span>{secondsRemaining}s</span>
-              </div>
-            )}
-            <span className="rounded-xl border border-white/15 bg-white/[.06] px-3 py-1 font-mono text-xs font-bold text-white/80">
-              {state.room_code}
-            </span>
-          </div>
-        </header>
-
-        {/* Question Area */}
-        <section className="my-auto py-8">
-          {question ? (
-            <div className="rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-9 shadow-2xl">
-              {/* Flag Media */}
-              {question.media?.type === "flag" && (
-                <div className="mx-auto mb-6 flex justify-center">
-                  <img
-                    src={question.media.url}
-                    alt={question.media.alt}
-                    className="h-32 w-auto max-w-xs rounded-2xl bg-white object-contain p-3 shadow-md border-2 border-black/10"
-                  />
-                </div>
-              )}
-
-              <p className="text-xs font-black uppercase tracking-[.16em] text-black/45">
-                {isRevealed ? "Answer Revealed" : "Choose your answer"}
-              </p>
-              <h1 className="mt-2 text-2xl font-black leading-tight tracking-[-.05em] sm:text-4xl">
-                {question.prompt}
-              </h1>
-
-              {/* Options Grid */}
-              <div className="mt-7 grid gap-3 sm:grid-cols-2">
-                {question.options.map((option) => {
-                  const isSelected = myAnswer.selected_option_id === option.id;
-                  const isCorrect = isRevealed && myAnswer.correct_option_id === option.id;
-                  const isWrongSelected = isRevealed && isSelected && !myAnswer.is_correct;
-
-                  let buttonStyle = "border-2 border-black/15 bg-white text-black hover:border-black";
-                  if (isCorrect) {
-                    buttonStyle = "border-2 border-emerald-600 bg-emerald-100 text-emerald-950 font-black shadow";
-                  } else if (isWrongSelected) {
-                    buttonStyle = "border-2 border-rose-500 bg-rose-100 text-rose-950 line-through opacity-80";
-                  } else if (isSelected) {
-                    buttonStyle = "border-2 border-[#101314] bg-[#101314] text-[#d7ff3f] shadow-md";
-                  }
-
-                  return (
-                    <button
-                      key={option.id}
-                      disabled={hasAnswered || isRevealed || isSubmitting || (secondsRemaining !== null && secondsRemaining <= 0)}
-                      onClick={() => onAnswer(option.id)}
-                      className={`flex items-center justify-between rounded-2xl px-5 py-4 text-left font-black transition disabled:cursor-not-allowed ${buttonStyle}`}
-                    >
-                      <span>{option.text}</span>
-                      {isSelected && !isRevealed && <Check size={18} />}
-                      {isCorrect && <CheckCircle2 size={18} className="text-emerald-700" />}
-                      {isWrongSelected && <XCircle size={18} className="text-rose-600" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Answer Status / Feedback */}
-              {hasAnswered && !isRevealed && (
-                <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl bg-black/[.06] p-4 text-center">
-                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
-                  <p className="text-sm font-bold text-black/70">
-                    Answer locked in — waiting for {state.host_name || "the host"} to reveal…
-                  </p>
-                </div>
-              )}
-
-              {/* Timer expired before answer */}
-              {!hasAnswered && !isRevealed && secondsRemaining === 0 && (
-                <div className="mt-6 rounded-2xl bg-rose-100 p-4 text-center text-sm font-bold text-rose-900">
-                  Time is up! Submissions closed for this question.
-                </div>
-              )}
-
-              {/* Reveal Result Banner */}
-              {isRevealed && (
-                <div
-                  className={`mt-6 rounded-2xl p-5 shadow-sm transition ${
-                    myAnswer.is_correct
-                      ? "bg-[#d7ff3f] text-[#101314]"
-                      : hasAnswered
-                      ? "bg-rose-100 text-rose-950"
-                      : "bg-black/10 text-black"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-lg font-black">
-                      {myAnswer.is_correct
-                        ? `Correct! +${myAnswer.points_awarded || 100} pts`
-                        : hasAnswered
-                        ? "Not this one!"
-                        : "Did not answer in time"}
-                    </p>
-                    <span className="font-mono text-sm font-bold">Total: {state.my_score} pts</span>
-                  </div>
-                  {myAnswer.explanation && (
-                    <p className="mt-2 text-sm font-medium leading-relaxed opacity-90">{myAnswer.explanation}</p>
-                  )}
-                </div>
-              )}
-
-              {error && <p role="alert" className="mt-4 text-sm font-bold text-rose-700">{error}</p>}
-            </div>
-          ) : (
-            <div className="rounded-[2.2rem] bg-[#f0eee8] p-10 text-center text-black">
-              <p className="text-lg font-bold">Waiting for round to load…</p>
-            </div>
-          )}
-
-          {/* Host Action Bar */}
-          {isHost ? (
-            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.05] p-4">
-              <p className="text-xs font-black uppercase tracking-[.14em] text-[#d7ff3f] mb-3">Host Controls</p>
-              <div className="flex flex-wrap gap-3">
-                {!isRevealed ? (
-                  <>
-                    <button
-                      className="button-lime flex-1 flex items-center justify-center gap-2 text-sm"
-                      disabled={isSubmitting}
-                      onClick={onReveal}
-                    >
-                      <Eye size={16} /> Reveal Answer
-                    </button>
-                    <button
-                      className="button-secondary flex items-center gap-2 text-sm"
-                      disabled={isSubmitting}
-                      onClick={onNext}
-                    >
-                      <SkipForward size={16} /> Skip
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    className="button-lime flex-1 flex items-center justify-center gap-2 text-sm"
-                    disabled={isSubmitting}
-                    onClick={onNext}
-                  >
-                    <ArrowRight size={16} /> Next Question
-                  </button>
-                )}
-                <button
-                  className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-xs font-bold text-rose-300 hover:bg-rose-500/20"
-                  disabled={isSubmitting}
-                  onClick={onEndGame}
-                >
-                  End Game
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="mt-6 text-center text-xs text-white/50">
-              {isRevealed
-                ? `Waiting for ${state.host_name || "the host"} to load the next question…`
-                : "Your phone is your controller. Answers are locked once tapped."}
-            </p>
-          )}
-        </section>
-      </div>
-    </main>
-  );
-}
-
-// RESULTS SCREEN
-function ResultsScreen({
-  room,
-  isHost,
-  leaderboard,
-  onPlayAgain,
-  onHome,
-}: {
-  room: string;
-  isHost: boolean;
-  leaderboard: LeaderboardEntry[];
-  onPlayAgain?: () => void;
-  onHome: () => void;
-}) {
-  return (
-    <main className="min-h-screen bg-[#101314] text-white">
-      <div className="mx-auto flex min-h-screen max-w-xl flex-col px-5 pb-10 pt-5 sm:px-8">
-        <Topbar compact onHome={onHome} />
-        <section className="my-auto rounded-[2.2rem] bg-[#f0eee8] p-8 text-center text-[#101314] shadow-2xl">
-          <Trophy className="mx-auto text-[#101314]" size={56} />
-          <p className="mt-6 text-xs font-black uppercase tracking-[.16em] text-black/45">Room {room}</p>
-          <h1 className="mt-2 text-5xl font-black tracking-[-.07em]">Game Over!</h1>
-          <p className="mt-3 text-sm text-black/60">Here is how the table finished:</p>
-
-          <div className="mt-7 space-y-2 text-left">
-            {leaderboard.map((entry, index) => (
-              <div
-                key={entry.name + index}
-                className={`flex items-center justify-between rounded-xl px-4 py-3 ${
-                  index === 0
-                    ? "bg-[#d7ff3f] font-black shadow"
-                    : entry.is_me
-                    ? "bg-black/15 font-bold"
-                    : "bg-black/[.05]"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-xs font-bold text-[#d7ff3f]">
-                    {index + 1}
-                  </span>
-                  <span className="font-bold">{entry.name}</span>
-                  {entry.is_me && <span className="text-[10px] uppercase font-bold text-black/60">(You)</span>}
-                  {entry.is_host && <span className="text-[10px] uppercase font-bold bg-black/10 px-1.5 py-0.5 rounded">Host</span>}
-                </div>
-                <span className="font-mono font-black">{entry.score} pts</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 flex flex-col gap-3">
-            {isHost && onPlayAgain && (
-              <button className="button-dark w-full flex items-center justify-center gap-2" onClick={onPlayAgain}>
-                <RotateCcw size={16} /> Play Again
-              </button>
-            )}
-            <button className="text-sm font-bold text-black/60 hover:text-black py-2" onClick={onHome}>
-              Return to Home
-            </button>
           </div>
         </section>
       </div>
@@ -1189,7 +817,7 @@ function Topbar({
             Join room
           </button>
           <button className="button-lime small" onClick={onCreate}>
-            Create room
+            Host a game
           </button>
         </nav>
       )}
