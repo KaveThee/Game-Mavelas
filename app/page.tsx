@@ -1014,23 +1014,13 @@ function GameScreen({
         <section className="my-auto py-8">
           {question ? (
             <div className="rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-9 shadow-2xl">
-              {/* Flag Media */}
-              {question.media?.type === "flag" && (
-                <div className="mx-auto mb-6 flex justify-center">
-                  <img
-                    src={question.media.url}
-                    alt={question.media.alt}
-                    className="h-32 w-auto max-w-xs rounded-2xl bg-white object-contain p-3 shadow-md border-2 border-black/10"
-                  />
-                </div>
-              )}
-
               <p className="text-xs font-black uppercase tracking-[.16em] text-black/45">
-                {isRevealed ? "Answer Revealed" : "Phone Controller · Look at the shared screen"}
+                {isRevealed ? "Answer Revealed" : "Phone Controller"}
               </p>
-              <h1 className="mt-2 text-2xl font-black leading-tight tracking-[-.05em] sm:text-4xl">
-                {question.prompt}
+              <h1 className="mt-2 text-3xl font-black leading-tight tracking-[-.06em] sm:text-4xl">
+                {isRevealed ? "Round complete." : "Look at the shared screen."}
               </h1>
+              {!isRevealed && <p className="mt-2 text-sm font-bold text-black/55">Tap the letter that matches the answer on TV.</p>}
 
               {/* Options Grid */}
               <div className="mt-7 grid grid-cols-2 gap-3">
