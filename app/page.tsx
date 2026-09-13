@@ -55,14 +55,14 @@ const games = [
   {
     id: "who",
     title: "Who Am I?",
-    kicker: "The picture game",
+    kicker: "Talk, clue, guess",
     icon: ImageIcon,
     color: "lime",
     template: "who_am_i_kenya",
-    description: "Guess your secret identity while the table gives yes-or-no clues.",
-    meta: "Kenyan Icons · Coming Phase 4",
-    instructions: "Everyone knows who you are except you. Ask the table questions to work out your identity.",
-    isSupported: false,
+    description: "One player at a time discovers a secret Kenyan icon through yes-or-no questions from the table.",
+    meta: "Kenyan Icons · Conversation rounds",
+    instructions: "The active player asks yes-or-no questions. Everyone else can see the secret identity and gives helpful clues. The active player then types a final guess.",
+    isSupported: true,
   },
   {
     id: "image",
@@ -96,6 +96,9 @@ type CurrentQuestion = {
   closes_at?: string | null;
   media?: { type: string; url: string; alt: string } | null;
   options: GameOption[];
+  active_player_name?: string | null;
+  is_active_player?: boolean;
+  secret_identity?: string | null;
 };
 
 type MyAnswer = {
@@ -446,6 +449,25 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     }
   }
 
+  async function handleWhoAmIGuess(guess: string) {
+    if (!supabase || !serverState?.current_question?.round_id || isSubmitting) return;
+
+    setConnectionError("");
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("submit_who_am_i_guess", {
+        p_round_id: serverState.current_question.round_id,
+        p_guess: guess.trim(),
+      });
+      if (error) throw error;
+      await refreshGameState();
+    } catch (err) {
+      setConnectionError(err instanceof Error ? err.message : "Could not submit your guess.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   // Host Actions
   async function handleHostReveal() {
     if (!supabase || !liveRoomId || isSubmitting) return;
@@ -525,6 +547,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         isSubmitting={isSubmitting}
         error={connectionError}
         onAnswer={handleSubmitAnswer}
+        onWhoAmIGuess={handleWhoAmIGuess}
         onReveal={handleHostReveal}
         onNext={handleHostAdvance}
         onEndGame={handleHostEndGame}
@@ -959,6 +982,7 @@ function GameScreen({
   isSubmitting,
   error,
   onAnswer,
+  onWhoAmIGuess,
   onReveal,
   onNext,
   onEndGame,
@@ -968,6 +992,7 @@ function GameScreen({
   isSubmitting: boolean;
   error: string;
   onAnswer: (optionId: string) => void;
+  onWhoAmIGuess: (guess: string) => void;
   onReveal: () => void;
   onNext: () => void;
   onEndGame: () => void;
@@ -977,6 +1002,8 @@ function GameScreen({
   const isHost = state.is_host;
   const isRevealed = state.phase === "revealed" || myAnswer.is_revealed;
   const hasAnswered = myAnswer.has_answered;
+  const isWhoAmI = question?.game_mode === "who_am_i";
+  const [guess, setGuess] = useState("");
 
   const modeLabel =
     games.find((g) => g.template === question?.game_mode || g.id === question?.game_mode)?.title || "Game Mavelas";
@@ -1015,15 +1042,57 @@ function GameScreen({
           {question ? (
             <div className="rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-9 shadow-2xl">
               <p className="text-xs font-black uppercase tracking-[.16em] text-black/45">
+screen-first-controllers
+                {isRevealed ? "Answer Revealed" : isWhoAmI ? "Conversation Round" : "Phone Controller"}
+              </p>
+              <h1 className="mt-2 text-3xl font-black leading-tight tracking-[-.06em] sm:text-4xl">
+                {isRevealed ? "Round complete." : isWhoAmI ? question?.is_active_player ? "You are the guesser." : `${question?.active_player_name || "A player"} is the guesser.` : "Look at the shared screen."}
+              </h1>
+              {!isRevealed && !isWhoAmI && <p className="mt-2 text-sm font-bold text-black/55">Tap the letter that matches the answer on TV.</p>}
+
+              {isWhoAmI && !isRevealed && (
+                question?.is_active_player ? (
+                  <div className="mt-6 rounded-2xl bg-black/[.06] p-5">
+                    <p className="text-sm font-bold text-black/65">Ask the table yes-or-no questions. When you are ready, type your one final guess.</p>
+                    <form
+                      className="mt-4 flex gap-2"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        if (guess.trim()) onWhoAmIGuess(guess);
+                      }}
+                    >
+                      <input
+                        value={guess}
+                        onChange={(event) => setGuess(event.target.value)}
+                        disabled={hasAnswered || isSubmitting}
+                        maxLength={80}
+                        placeholder="Type your identity…"
+                        className="min-w-0 flex-1 rounded-xl border-2 border-[#101314] bg-white px-4 py-3 text-base font-bold outline-none placeholder:text-black/35 focus:ring-4 focus:ring-[#d7ff3f]/50"
+                      />
+                      <button className="button-dark px-4 text-sm" disabled={hasAnswered || isSubmitting || !guess.trim()} type="submit">
+                        Guess
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <div className="mt-6 rounded-2xl border-2 border-[#101314] bg-[#101314] p-5 text-[#d7ff3f] shadow-[0_6px_0_#101314]">
+                    <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]/70">Keep it secret from {question?.active_player_name || "the guesser"}</p>
+                    <p className="mt-2 text-3xl font-black tracking-[-.05em]">{question?.secret_identity || "Identity loading…"}</p>
+                    <p className="mt-2 text-sm font-bold text-white/65">Answer only yes-or-no questions and give fair clues.</p>
+                  </div>
+                )
+              )}
+=======
                 {isRevealed ? "Answer Revealed" : "Phone Controller"}
               </p>
               <h1 className="mt-2 text-3xl font-black leading-tight tracking-[-.06em] sm:text-4xl">
                 {isRevealed ? "Round complete." : "Look at the shared screen."}
               </h1>
               {!isRevealed && <p className="mt-2 text-sm font-bold text-black/55">Tap the letter that matches the answer on TV.</p>}
+main
 
               {/* Options Grid */}
-              <div className="mt-7 grid grid-cols-2 gap-3">
+              {!isWhoAmI && <div className="mt-7 grid grid-cols-2 gap-3">
                 {question.options.map((option, index) => {
                   const optionLetter = String.fromCharCode(65 + index);
                   const isSelected = myAnswer.selected_option_id === option.id;
@@ -1052,14 +1121,14 @@ function GameScreen({
                     </button>
                   );
                 })}
-              </div>
+              </div>}
 
               {/* Answer Status / Feedback */}
               {hasAnswered && !isRevealed && (
                 <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl bg-black/[.06] p-4 text-center">
                   <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
                   <p className="text-sm font-bold text-black/70">
-                    Answer locked in — waiting for {state.host_name || "the host"} to reveal…
+                    {isWhoAmI ? `Guess locked in — waiting for ${state.host_name || "the host"} to reveal…` : `Answer locked in — waiting for ${state.host_name || "the host"} to reveal…`}
                   </p>
                 </div>
               )}
