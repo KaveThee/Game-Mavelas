@@ -38,6 +38,7 @@ type PublicRound = {
   media?: { type: string; url: string; alt: string } | null;
   correct_option?: string | null;
   explanation?: string | null;
+  active_player_name?: string | null;
 };
 
 const gameName: Record<string, string> = {
@@ -137,6 +138,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const isLobby = !room || room.phase === "lobby" || room.phase === "selected" || room.status === "lobby";
   const isResults = room?.phase === "results" || room?.status === "results";
   const isRevealed = room?.phase === "revealed" || round?.status === "revealed";
+  const isWhoAmI = round?.game_mode === "who_am_i";
 
   const totalPlayers = room?.players.length ?? 0;
   const answeredCount = room?.answered_count ?? 0;
@@ -229,8 +231,16 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               </div>
 
               <h1 className="mt-4 max-w-4xl whitespace-pre-line text-5xl font-black leading-[.92] tracking-[-.07em] sm:text-7xl lg:text-8xl">
-                {isLobby ? "THE TABLE\nIS GATHERING." : round?.prompt || "PLAY\nTOGETHER."}
+                {isLobby ? "THE TABLE\nIS GATHERING." : isWhoAmI ? `${(round?.active_player_name || "The guesser").toUpperCase()}\nIS UP!` : round?.prompt || "PLAY\nTOGETHER."}
               </h1>
+
+              {isWhoAmI && !isRevealed && (
+                <div className="mt-8 max-w-3xl rounded-[2rem] border border-white/15 bg-white/[.06] p-6 sm:p-8">
+                  <p className="text-sm font-black uppercase tracking-[.16em] text-[#d7ff3f]">Who Am I?</p>
+                  <p className="mt-3 text-2xl font-black leading-tight sm:text-4xl">{round?.active_player_name || "The active player"}, ask the table yes-or-no questions.</p>
+                  <p className="mt-3 text-base font-bold leading-6 text-white/60">Everyone else: keep the identity secret, answer fairly, and help with clues. The guesser submits their final answer on their phone.</p>
+                </div>
+              )}
 
               {/* Media for Flag Frenzy */}
               {round?.media?.type === "flag" && (
@@ -245,7 +255,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
               {/* The TV is the source of truth for answer wording. Controllers
                   receive only matching A/B/C/D pads, keeping attention at the table. */}
-              {!isLobby && round && round.options.length > 0 && (
+              {!isLobby && !isWhoAmI && round && round.options.length > 0 && (
                 <div className="mt-8 grid max-w-4xl grid-cols-2 gap-3 sm:gap-4">
                   {round.options.map((option) => {
                     const isCorrect = isRevealed && option.is_correct;
