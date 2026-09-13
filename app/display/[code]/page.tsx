@@ -34,6 +34,7 @@ type PublicRound = {
   opens_at?: string | null;
   closes_at?: string | null;
   prompt: string;
+  options: Array<{ label: string; text: string; is_correct?: boolean | null }>;
   media?: { type: string; url: string; alt: string } | null;
   correct_option?: string | null;
   explanation?: string | null;
@@ -239,6 +240,33 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                     alt={round.media.alt}
                     className="h-44 w-auto max-w-md rounded-3xl bg-white object-contain p-4 shadow-2xl border-4 border-white/10"
                   />
+                </div>
+              )}
+
+              {/* The TV is the source of truth for answer wording. Controllers
+                  receive only matching A/B/C/D pads, keeping attention at the table. */}
+              {!isLobby && round && round.options.length > 0 && (
+                <div className="mt-8 grid max-w-4xl grid-cols-2 gap-3 sm:gap-4">
+                  {round.options.map((option) => {
+                    const isCorrect = isRevealed && option.is_correct;
+                    return (
+                      <div
+                        key={option.label}
+                        className={`flex min-h-24 items-center gap-4 rounded-3xl border-2 px-5 py-4 sm:min-h-28 sm:px-7 ${
+                          isCorrect
+                            ? "border-[#d7ff3f] bg-[#d7ff3f] text-[#101314]"
+                            : "border-white/15 bg-white/[.07] text-white"
+                        }`}
+                      >
+                        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl font-mono text-xl font-black ${
+                          isCorrect ? "bg-[#101314] text-[#d7ff3f]" : "bg-white/10 text-[#d7ff3f]"
+                        }`}>
+                          {option.label}
+                        </span>
+                        <span className="text-lg font-black leading-tight sm:text-2xl">{option.text}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 

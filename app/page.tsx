@@ -1034,7 +1034,8 @@ function GameScreen({
 
               {/* Options Grid */}
               <div className="mt-7 grid gap-3 sm:grid-cols-2">
-                {question.options.map((option) => {
+                {question.options.map((option, index) => {
+                  const optionLetter = String.fromCharCode(65 + index);
                   const isSelected = myAnswer.selected_option_id === option.id;
                   const isCorrect = isRevealed && myAnswer.correct_option_id === option.id;
                   const isWrongSelected = isRevealed && isSelected && !myAnswer.is_correct;
@@ -1051,14 +1052,12 @@ function GameScreen({
                   return (
                     <button
                       key={option.id}
+                      aria-label={`Answer ${optionLetter}`}
                       disabled={hasAnswered || isRevealed || isSubmitting || (secondsRemaining !== null && secondsRemaining <= 0)}
                       onClick={() => onAnswer(option.id)}
-                      className={`flex items-center justify-between rounded-2xl px-5 py-4 text-left font-black transition disabled:cursor-not-allowed ${buttonStyle}`}
+                      className={`flex min-h-28 items-center justify-center rounded-2xl px-5 py-4 text-center text-5xl font-black transition disabled:cursor-not-allowed sm:min-h-32 sm:text-6xl ${buttonStyle}`}
                     >
-                      <span>{option.text}</span>
-                      {isSelected && !isRevealed && <Check size={18} />}
-                      {isCorrect && <CheckCircle2 size={18} className="text-emerald-700" />}
-                      {isWrongSelected && <XCircle size={18} className="text-rose-600" />}
+                      <span>{optionLetter}</span>
                     </button>
                   );
                 })}
