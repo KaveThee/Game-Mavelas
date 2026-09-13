@@ -560,6 +560,15 @@ as $$
       when q.game_mode in ('who_am_i', 'guess_image') or m.id is null then null
       else jsonb_build_object('type', m.asset_type, 'url', m.public_url, 'alt', m.alt_text)
     end,
+    'options', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'label', chr(64 + qo.position),
+        'text', qo.option_text,
+        'is_correct', case when gr.status = 'revealed' then qo.is_correct else null end
+      ) order by qo.position)
+      from public.question_options qo
+      where qo.question_id = q.id
+    ), '[]'::jsonb),
     'correct_option', case
       when gr.status = 'revealed' and q.game_mode not in ('who_am_i', 'guess_image') then (
         select qo.option_text from public.question_options qo
