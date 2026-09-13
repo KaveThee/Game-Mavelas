@@ -1026,27 +1026,27 @@ function GameScreen({
               )}
 
               <p className="text-xs font-black uppercase tracking-[.16em] text-black/45">
-                {isRevealed ? "Answer Revealed" : "Choose your answer"}
+                {isRevealed ? "Answer Revealed" : "Phone Controller · Look at the shared screen"}
               </p>
               <h1 className="mt-2 text-2xl font-black leading-tight tracking-[-.05em] sm:text-4xl">
                 {question.prompt}
               </h1>
 
               {/* Options Grid */}
-              <div className="mt-7 grid gap-3 sm:grid-cols-2">
+              <div className="mt-7 grid grid-cols-2 gap-3">
                 {question.options.map((option, index) => {
                   const optionLetter = String.fromCharCode(65 + index);
                   const isSelected = myAnswer.selected_option_id === option.id;
                   const isCorrect = isRevealed && myAnswer.correct_option_id === option.id;
                   const isWrongSelected = isRevealed && isSelected && !myAnswer.is_correct;
 
-                  let buttonStyle = "border-2 border-black/15 bg-white text-black hover:border-black";
+                  let buttonStyle = "border-2 border-[#101314] bg-[#101314] text-[#d7ff3f] shadow-[0_6px_0_#101314] hover:-translate-y-0.5 hover:bg-[#1b2022]";
                   if (isCorrect) {
-                    buttonStyle = "border-2 border-emerald-600 bg-emerald-100 text-emerald-950 font-black shadow";
+                    buttonStyle = "border-2 border-[#101314] bg-[#d7ff3f] text-[#101314] font-black shadow-[0_6px_0_#101314]";
                   } else if (isWrongSelected) {
-                    buttonStyle = "border-2 border-rose-500 bg-rose-100 text-rose-950 line-through opacity-80";
+                    buttonStyle = "border-2 border-rose-700 bg-rose-500/20 text-rose-800 opacity-80 shadow-[0_6px_0_#9f1239]";
                   } else if (isSelected) {
-                    buttonStyle = "border-2 border-[#101314] bg-[#101314] text-[#d7ff3f] shadow-md";
+                    buttonStyle = "border-2 border-[#101314] bg-[#d7ff3f] text-[#101314] shadow-[0_6px_0_#101314]";
                   }
 
                   return (
@@ -1055,7 +1055,8 @@ function GameScreen({
                       aria-label={`Answer ${optionLetter}`}
                       disabled={hasAnswered || isRevealed || isSubmitting || (secondsRemaining !== null && secondsRemaining <= 0)}
                       onClick={() => onAnswer(option.id)}
-                      className={`flex min-h-28 items-center justify-center rounded-2xl px-5 py-4 text-center text-5xl font-black transition disabled:cursor-not-allowed sm:min-h-32 sm:text-6xl ${buttonStyle}`}
+                      className={`controller-pad flex min-h-32 items-center justify-center rounded-[1.5rem] px-4 py-4 text-center font-mono font-black transition disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none sm:min-h-36 ${buttonStyle}`}
+                      style={{ fontSize: "clamp(5.5rem, 22vw, 9rem)", fontWeight: 900, lineHeight: 1 }}
                     >
                       <span>{optionLetter}</span>
                     </button>
