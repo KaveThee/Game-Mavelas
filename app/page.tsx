@@ -30,15 +30,39 @@ import { ensureGameIdentity, supabase } from "@/lib/supabase";
 
 const games = [
   {
-    id: "trivia",
-    title: "Trivia Rush",
-    kicker: "Multi-phase quiz",
+    id: "trivia-kenya",
+    title: "Kenya Vault",
+    kicker: "Easy → Medium → Hard",
     icon: Sparkles,
     color: "pink",
-    template: "trivia_rush_classic",
-    description: "Rapid-fire quiz on Kenyan and African history, science, geography, and pop culture.",
-    meta: "8 categories · 15 questions · Fast rounds",
-    instructions: "Questions will appear on the big screen and your phone. Choose the correct answer before time runs out!",
+    template: "trivia_vault_kenya",
+    description: "A three-round Kenya and East Africa challenge, from warm-up facts to proper local knowledge.",
+    meta: "15 questions · 100 → 200 points · Kenya focus",
+    instructions: "Choose an answer on your phone before the timer ends. Each round gets tougher and earns more points.",
+    isSupported: true,
+  },
+  {
+    id: "trivia-scitech",
+    title: "Science & Tech Vault",
+    kicker: "Think fast, level up",
+    icon: Sparkles,
+    color: "pink",
+    template: "trivia_vault_scitech",
+    description: "Test the table on science and technology through three escalating rounds.",
+    meta: "15 questions · 100 → 200 points · Science + tech",
+    instructions: "Start with a warm-up, then progress into technology and the final hard round.",
+    isSupported: true,
+  },
+  {
+    id: "trivia-mix",
+    title: "Trivia Vault: Mix",
+    kicker: "The all-rounder",
+    icon: Sparkles,
+    color: "pink",
+    template: "trivia_vault_mix",
+    description: "A broad general-knowledge run for mixed groups, with a clear Easy, Medium and Hard finish.",
+    meta: "15 questions · 100 → 200 points · Mixed topics",
+    instructions: "Every correct tap scores. The final round is worth the most, so no lead is safe.",
     isSupported: true,
   },
   {
@@ -163,7 +187,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   const [screen, setScreen] = useState<Screen>("home");
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
-  const [selectedGame, setSelectedGame] = useState("trivia");
+  const [selectedGame, setSelectedGame] = useState("trivia-kenya");
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState("");
   const [liveRoomId, setLiveRoomId] = useState("");
