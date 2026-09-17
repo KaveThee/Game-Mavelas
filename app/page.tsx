@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import Image from "next/image";
 import {
   ArrowRight,
   Check,
@@ -1087,6 +1088,15 @@ function GameScreen({
                 ) : (
                   <div className="mt-6 rounded-2xl border-2 border-[#101314] bg-[#101314] p-5 text-[#d7ff3f] shadow-[0_6px_0_#101314]">
                     <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]/70">Keep it secret from {question?.active_player_name || "the guesser"}</p>
+                    {question?.media?.type === "image" && (
+                      <Image
+                        src={question.media.url}
+                        alt={question.media.alt}
+                        width={512}
+                        height={512}
+                        className="mt-4 aspect-square w-full max-w-sm rounded-3xl border-4 border-white/10 bg-[#d7ff3f] object-cover"
+                      />
+                    )}
                     <p className="mt-2 text-3xl font-black tracking-[-.05em]">{question?.secret_identity || "Identity loading…"}</p>
                     <p className="mt-2 text-sm font-bold text-white/65">Answer only yes-or-no questions and give fair clues.</p>
                   </div>

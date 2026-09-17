@@ -39,6 +39,25 @@ create trigger assign_who_am_i_player_before_round
 before insert on public.game_rounds
 for each row execute function public.assign_who_am_i_player();
 
+insert into public.media_assets (asset_type, provider, asset_key, public_url, alt_text, attribution, licence, width, height)
+select 'image', 'game_mavelas', v.asset_key, v.public_url, v.alt_text, 'Original Game Mavelas vector artwork', 'Project asset', 512, 512
+from (values
+  ('wangari-maathai', '/celebrities/wangari-maathai.svg', 'Stylized portrait of Wangari Maathai'),
+  ('eliud-kipchoge', '/celebrities/eliud-kipchoge.svg', 'Stylized portrait of Eliud Kipchoge'),
+  ('lupita-nyongo', '/celebrities/lupita-nyongo.svg', 'Stylized portrait of Lupita Nyong''o'),
+  ('faith-kipyegon', '/celebrities/faith-kipyegon.svg', 'Stylized portrait of Faith Kipyegon'),
+  ('david-rudisha', '/celebrities/david-rudisha.svg', 'Stylized portrait of David Rudisha'),
+  ('mekatilili-wa-menza', '/celebrities/mekatilili-wa-menza.svg', 'Stylized portrait of Mekatilili wa Menza'),
+  ('dedan-kimathi', '/celebrities/dedan-kimathi.svg', 'Stylized portrait of Dedan Kimathi'),
+  ('ferdinand-omanyala', '/celebrities/ferdinand-omanyala.svg', 'Stylized portrait of Ferdinand Omanyala'),
+  ('joy-adamson', '/celebrities/joy-adamson.svg', 'Stylized portrait of Joy Adamson'),
+  ('mwai-kibaki', '/celebrities/mwai-kibaki.svg', 'Stylized portrait of Mwai Kibaki')
+) as v(asset_key, public_url, alt_text)
+on conflict (provider, asset_key) do update set
+  public_url = excluded.public_url, alt_text = excluded.alt_text,
+  attribution = excluded.attribution, licence = excluded.licence,
+  width = excluded.width, height = excluded.height;
+
 insert into public.questions (slug, pack_id, category_id, game_mode, prompt, explanation, difficulty, duration_seconds, base_points, tags, status, source_id, fact_checked_at)
 select v.slug, p.id, c.id, 'who_am_i', 'Who Am I?', v.explanation, v.difficulty, 45, 200, array['kenya','icons','who_am_i'], 'approved', s.id, now()
 from (values
@@ -75,6 +94,23 @@ from (values
 ) as v(question_slug, position, option_text, is_correct)
 join public.questions q on q.slug = v.question_slug
 on conflict (question_id, position) do update set option_text = excluded.option_text, is_correct = excluded.is_correct;
+
+update public.questions q
+set media_id = m.id, updated_at = now()
+from public.media_assets m
+where m.provider = 'game_mavelas'
+  and m.asset_key = case q.slug
+    when 'wangari_maathai' then 'wangari-maathai'
+    when 'eliud_kipchoge_identity' then 'eliud-kipchoge'
+    when 'lupita_nyongo_identity' then 'lupita-nyongo'
+    when 'faith_kipyegon_identity' then 'faith-kipyegon'
+    when 'david_rudisha_identity' then 'david-rudisha'
+    when 'mekatilili_wa_menza_identity' then 'mekatilili-wa-menza'
+    when 'dedan_kimathi_identity' then 'dedan-kimathi'
+    when 'ferdinand_omanyala_identity' then 'ferdinand-omanyala'
+    when 'joy_adamson_identity' then 'joy-adamson'
+    when 'mwai_kibaki_identity' then 'mwai-kibaki'
+  end;
 
 update public.round_template_steps
 set question_count = 10, seconds_per_question = 45
@@ -178,7 +214,11 @@ begin
       'opens_at', v_round.opens_at, 'closes_at', v_round.closes_at,
       'active_player_name', v_active_name, 'is_active_player', v_round.active_player_id = v_user,
       'secret_identity', case when v_question.game_mode = 'who_am_i' and v_round.active_player_id <> v_user then v_secret else null end,
-      'media', case when v_question.game_mode = 'who_am_i' or v_question.media_url is null then null else jsonb_build_object('type', v_question.media_type, 'url', v_question.media_url, 'alt', v_question.media_alt) end,
+      'media', case
+        when v_question.media_url is null then null
+        when v_question.game_mode = 'who_am_i' and v_round.active_player_id = v_user and v_round.status <> 'revealed' then null
+        else jsonb_build_object('type', v_question.media_type, 'url', v_question.media_url, 'alt', v_question.media_alt)
+      end,
       'options', case when v_question.game_mode = 'who_am_i' then '[]'::jsonb else coalesce((select jsonb_agg(jsonb_build_object('id', qo.id, 'text', qo.option_text) order by qo.position) from public.question_options qo where qo.question_id = v_question.id), '[]'::jsonb) end
     ) end,
     'my_answer', jsonb_build_object(
