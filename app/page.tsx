@@ -76,6 +76,8 @@ const games = [
     color: "pink",
     description: "Choose a themed quiz branch: Home Turf, Brain Buzz, or Anything Goes.",
     meta: "3 branches · 15 questions · 100 → 200 points",
+    template: "",
+    instructions: "Pick a Trivia Vault branch before starting.",
     isSupported: true,
   },
   {
