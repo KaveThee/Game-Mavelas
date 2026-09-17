@@ -362,6 +362,23 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     };
   }, [liveRoomId, refreshGameState]);
 
+  // Any connected controller can safely trigger the server-checked reveal.
+  // The RPC only works once the room has been locked for at least three seconds.
+  useEffect(() => {
+    if (!serverState || serverState.phase !== "all_answered" || !liveRoomId || !supabase) return;
+    const roundId = serverState.current_question?.round_id;
+    if (!roundId) return;
+    const client = supabase;
+
+    const timer = window.setTimeout(() => {
+      void client
+        .rpc("auto_reveal_round", { p_room_id: liveRoomId })
+        .then(() => refreshGameState());
+    }, 3100);
+
+    return () => window.clearTimeout(timer);
+  }, [serverState?.phase, serverState?.current_question?.round_id, liveRoomId, refreshGameState]);
+
   // Synchronized countdown timer for player controller
   useEffect(() => {
     const round = serverState?.current_question;
@@ -1360,22 +1377,28 @@ function GameScreen({
               <p className="text-xs font-black uppercase tracking-[.14em] text-[#d7ff3f] mb-3">Host Controls</p>
               <div className="flex flex-wrap gap-3">
                 {!isRevealed ? (
-                  <>
-                    <button
-                      className="button-lime flex-1 flex items-center justify-center gap-2 text-sm"
-                      disabled={isSubmitting}
-                      onClick={onReveal}
-                    >
-                      <Eye size={16} /> {isClueHeist ? "Reveal Mystery" : allAnswersIn ? "Everyone’s In — Reveal" : "Reveal Answer"}
-                    </button>
-                    <button
-                      className="button-secondary flex items-center gap-2 text-sm"
-                      disabled={isSubmitting}
-                      onClick={onNext}
-                    >
-                      <SkipForward size={16} /> Skip
-                    </button>
-                  </>
+                  allAnswersIn ? (
+                    <div className="flex-1 rounded-xl bg-[#d7ff3f] px-4 py-2.5 text-center text-sm font-black text-[#101314]">
+                      EVERYONE’S IN — revealing the answer…
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        className="button-lime flex-1 flex items-center justify-center gap-2 text-sm"
+                        disabled={isSubmitting}
+                        onClick={onReveal}
+                      >
+                        <Eye size={16} /> {isClueHeist ? "Reveal Mystery" : "Reveal Answer"}
+                      </button>
+                      <button
+                        className="button-secondary flex items-center gap-2 text-sm"
+                        disabled={isSubmitting}
+                        onClick={onNext}
+                      >
+                        <SkipForward size={16} /> Skip
+                      </button>
+                    </>
+                  )
                 ) : (
                   <button
                     className="button-lime flex-1 flex items-center justify-center gap-2 text-sm"
