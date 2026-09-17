@@ -220,26 +220,6 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
           return;
         }
 
-        // Repairs the rare partial-create case where the room exists but the host
-        // membership row was never completed. It cannot promote another player.
-        const { data: membership, error: membershipError } = await client
-          .from("room_players")
-          .select("id")
-          .eq("room_id", roomData.id)
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (membershipError) throw membershipError;
-        if (!membership) {
-          const fallbackName = sessionStorage.getItem("mavelas_player_name") || "Host";
-          const { error: addHostError } = await client.from("room_players").insert({
-            room_id: roomData.id,
-            user_id: user.id,
-            nickname: fallbackName.slice(0, 24),
-            role: "host",
-          });
-          if (addHostError) throw addHostError;
-        }
-
         if (cancelled) return;
         sessionStorage.setItem("mavelas_room_id", roomData.id);
         setLiveRoomId(roomData.id);
@@ -336,27 +316,21 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setConnectionError("");
     setIsConnecting(true);
     try {
-      const user = await ensureGameIdentity();
+      await ensureGameIdentity();
       if (!supabase) throw new Error("Live game service not configured.");
-      const code = Array.from({ length: 4 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
-
-      const { data: created, error: roomError } = await supabase
-        .from("rooms")
-        .insert({ code, host_id: user.id, selected_game: selectedGame, status: "lobby", phase: "lobby" })
-        .select("id, code")
-        .single();
+      const { data: created, error: roomError } = await supabase.rpc("create_game_room", {
+        p_nickname: name.trim(),
+        p_selected_game: selectedGame,
+      });
       if (roomError || !created) throw roomError ?? new Error("Could not create the room.");
 
-      const { error: playerError } = await supabase
-        .from("room_players")
-        .insert({ room_id: created.id, user_id: user.id, nickname: name.trim(), role: "host" });
-      if (playerError) throw playerError;
+      const room = created as { id: string; code: string };
 
-      sessionStorage.setItem("mavelas_room_id", created.id);
+      sessionStorage.setItem("mavelas_room_id", room.id);
       sessionStorage.setItem("mavelas_player_name", name.trim());
       // A creator always continues on the explicit host-controller surface.
       // The TV/display is opened separately at /display/[code].
-      window.location.assign(`/host/${created.code}`);
+      window.location.assign(`/host/${room.code}`);
       return;
     } catch (err) {
       setConnectionError(err instanceof Error ? err.message : "Could not create room.");
@@ -369,21 +343,21 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setConnectionError("");
     setIsConnecting(true);
     try {
-      const user = await ensureGameIdentity();
+      await ensureGameIdentity();
       if (!supabase) throw new Error("Live game service not configured.");
 
-      const { data: roomData, error: lookupError } = await supabase
-        .from("rooms")
-        .select("id, code, host_id, selected_game, status")
-        .eq("code", roomCode.toUpperCase().trim())
-        .single();
-      if (lookupError || !roomData) throw new Error("Room not found. Check the code and try again.");
-      if (roomData.status === "closed") throw new Error("This room is closed.");
+      const { data: joined, error: joinError } = await supabase.rpc("join_game_room", {
+        p_room_code: roomCode.toUpperCase().trim(),
+        p_nickname: name.trim(),
+      });
+      if (joinError || !joined) throw joinError ?? new Error("Could not join the room.");
 
-      const { error: playerError } = await supabase
-        .from("room_players")
-        .upsert({ room_id: roomData.id, user_id: user.id, nickname: name.trim(), role: "player" }, { onConflict: "room_id,user_id" });
-      if (playerError) throw playerError;
+      const roomData = joined as {
+        id: string;
+        code: string;
+        status: string;
+        selected_game: string;
+      };
 
       sessionStorage.setItem("mavelas_room_id", roomData.id);
       sessionStorage.setItem("mavelas_player_name", name.trim());
@@ -1042,7 +1016,6 @@ function GameScreen({
           {question ? (
             <div className="rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-9 shadow-2xl">
               <p className="text-xs font-black uppercase tracking-[.16em] text-black/45">
-screen-first-controllers
                 {isRevealed ? "Answer Revealed" : isWhoAmI ? "Conversation Round" : "Phone Controller"}
               </p>
               <h1 className="mt-2 text-3xl font-black leading-tight tracking-[-.06em] sm:text-4xl">
@@ -1082,15 +1055,6 @@ screen-first-controllers
                   </div>
                 )
               )}
-=======
-                {isRevealed ? "Answer Revealed" : "Phone Controller"}
-              </p>
-              <h1 className="mt-2 text-3xl font-black leading-tight tracking-[-.06em] sm:text-4xl">
-                {isRevealed ? "Round complete." : "Look at the shared screen."}
-              </h1>
-              {!isRevealed && <p className="mt-2 text-sm font-bold text-black/55">Tap the letter that matches the answer on TV.</p>}
-main
-
               {/* Options Grid */}
               {!isWhoAmI && <div className="mt-7 grid grid-cols-2 gap-3">
                 {question.options.map((option, index) => {
