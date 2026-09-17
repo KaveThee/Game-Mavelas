@@ -58,7 +58,10 @@ type PublicClueHeist = {
 const gameName: Record<string, string> = {
   who_am_i: "Who Am I?",
   flag_frenzy: "Flag Frenzy",
-  trivia: "Trivia Rush",
+  trivia: "Trivia Vault",
+  "trivia-kenya": "Trivia Vault · Home Turf",
+  "trivia-scitech": "Trivia Vault · Brain Buzz",
+  "trivia-mix": "Trivia Vault · Anything Goes",
   guess_image: "Clue Heist",
 };
 
@@ -384,23 +387,24 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
               {/* Lobby QR Code Card */}
               {isLobby && (
-                <div className="mt-8 flex flex-wrap items-center gap-5 rounded-[2rem] border border-white/10 bg-white/[.04] p-5 max-w-xl">
+                <div className="mt-8 flex max-w-3xl flex-wrap items-center gap-7 rounded-[2rem] border border-[#d7ff3f]/30 bg-white/[.06] p-6 shadow-2xl sm:p-8">
                   {qrDataUrl ? (
                     <img
                       src={qrDataUrl}
                       alt="Scan to join room"
-                      className="h-32 w-32 rounded-2xl bg-white p-2 shadow-md shrink-0"
+                      className="h-48 w-48 rounded-3xl bg-white p-3 shadow-md shrink-0 sm:h-56 sm:w-56"
                     />
                   ) : (
-                    <div className="grid h-32 w-32 place-items-center rounded-2xl bg-white/[.08] text-white/40 shrink-0">
-                      <QrCode size={40} />
+                    <div className="grid h-48 w-48 place-items-center rounded-3xl bg-white/[.08] text-white/40 shrink-0 sm:h-56 sm:w-56">
+                      <QrCode size={64} />
                     </div>
                   )}
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">Instant Join</p>
-                    <p className="mt-1 text-xl font-black">First phone becomes host</p>
-                    <p className="mt-1.5 text-sm text-white/60">
-                      Scan to claim the game controls. Everyone after that joins as a player — or enter code <strong className="font-mono text-[#d7ff3f]">{code}</strong> at{" "}
+                  <div className="min-w-[220px]">
+                    <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">Scan or enter this code</p>
+                    <p className="mt-2 font-mono text-5xl font-black tracking-[.12em] text-white sm:text-6xl">{code}</p>
+                    <p className="mt-5 text-xl font-black">First phone becomes host</p>
+                    <p className="mt-1.5 max-w-sm text-sm leading-6 text-white/60">
+                      Scan to claim the game controls. Everyone after that joins as a player at{" "}
                       <span className="font-mono text-white/80">
                         {typeof window !== "undefined" ? window.location.host : "gamemavelas"}
                       </span>
