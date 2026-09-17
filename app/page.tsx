@@ -48,7 +48,7 @@ const games = [
     color: "yellow",
     template: "flag_frenzy_africa",
     description: "Spot the country from its flag before the countdown runs down.",
-    meta: "Africa & East Africa · 10 rounds · 12s per flag",
+    meta: "World flags · 3 Easy + 4 Medium + 3 Hard",
     instructions: "A flag will display on the screen. Tap the matching country name as fast as you can to score points!",
     isSupported: true,
   },
@@ -77,6 +77,13 @@ const games = [
     isSupported: false,
   },
 ];
+
+function getFlagDifficulty(position?: number): "Easy" | "Medium" | "Hard" | null {
+  if (!position) return null;
+  if (position <= 3) return "Easy";
+  if (position <= 7) return "Medium";
+  return "Hard";
+}
 
 type Screen = "home" | "create" | "join" | "lobby" | "game" | "results" | "host-denied";
 
@@ -1009,6 +1016,8 @@ function GameScreen({
 
   const modeLabel =
     games.find((g) => g.template === question?.game_mode || g.id === question?.game_mode)?.title || "Game Mavelas";
+  const flagDifficulty =
+    question?.game_mode === "flag_frenzy" ? getFlagDifficulty(question.position) : null;
 
   return (
     <main className="min-h-screen bg-[#101314] text-white">
@@ -1017,7 +1026,7 @@ function GameScreen({
         <header className="flex items-center justify-between border-b border-white/10 pb-4">
           <div>
             <span className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">
-              {modeLabel} · Round {question?.position} of {question?.total_rounds || 10}
+              {modeLabel}{flagDifficulty ? ` · ${flagDifficulty}` : ""} · Round {question?.position} of {question?.total_rounds || 10}
             </span>
             <p className="text-sm text-white/50">Score: <strong className="text-white font-mono">{state.my_score} pts</strong></p>
           </div>

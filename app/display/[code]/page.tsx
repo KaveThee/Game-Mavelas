@@ -48,6 +48,13 @@ const gameName: Record<string, string> = {
   guess_image: "Guess the Image",
 };
 
+function getFlagDifficulty(position?: number): "Easy" | "Medium" | "Hard" | null {
+  if (!position) return null;
+  if (position <= 3) return "Easy";
+  if (position <= 7) return "Medium";
+  return "Hard";
+}
+
 export default function SharedDisplay({ params }: { params: Promise<{ code: string }> }) {
   const [code, setCode] = useState("");
   const [room, setRoom] = useState<PublicRoom | null>(null);
@@ -147,6 +154,8 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const isResults = room?.phase === "results" || room?.status === "results";
   const isRevealed = room?.phase === "revealed" || round?.status === "revealed";
   const isWhoAmI = round?.game_mode === "who_am_i";
+  const flagDifficulty =
+    round?.game_mode === "flag_frenzy" ? getFlagDifficulty(round.position) : null;
 
   const totalPlayers = room?.players.length ?? 0;
   const answeredCount = room?.answered_count ?? 0;
@@ -224,8 +233,8 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                   {isLobby
                     ? "Party Lobby"
                     : isRevealed
-                    ? `${title} · Round ${round?.position} Reveal`
-                    : `${title} · Round ${round?.position}`}
+                    ? `${title}${flagDifficulty ? ` · ${flagDifficulty}` : ""} · Round ${round?.position} Reveal`
+                    : `${title}${flagDifficulty ? ` · ${flagDifficulty}` : ""} · Round ${round?.position}`}
                 </span>
                 {!isLobby && (
                   <span
