@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Catherine Kamau</title>
+  <desc id="desc">Stylized vector portrait of Catherine Kamau for the Game Mavelas Who Am I game.</desc>
+  <rect width="512" height="512" rx="56" fill="#d7ff3f"/>
+  <circle cx="72" cy="76" r="34" fill="#101314" opacity=".08"/><circle cx="447" cy="126" r="58" fill="#101314" opacity=".08"/>
+  <path d="M89 512c10-112 68-173 167-173s157 61 167 173Z" fill="#8f2d56"/>
+  <path d="M215 328h82v73c-22 22-60 22-82 0Z" fill="#85523c"/>
+  <path d="M166 221c1-84 39-127 90-127s89 43 90 127c-27-36-57-54-90-54s-63 18-90 54Z" fill="#171210"/><path d="M183 175c-18 72-17 123-1 156M206 151c-18 87-14 152 0 190M306 151c18 87 14 152 0 190M329 175c18 72 17 123 1 156" fill="none" stroke="#171210" stroke-width="13" stroke-linecap="round"/>
+  <ellipse cx="256" cy="245" rx="82" ry="111" fill="#85523c"/>
+  <ellipse cx="176" cy="254" rx="15" ry="25" fill="#85523c"/><ellipse cx="336" cy="254" rx="15" ry="25" fill="#85523c"/>
+  <path d="M205 218c14-9 29-9 43-1M264 217c14-8 29-8 43 1" fill="none" stroke="#241713" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="226" cy="242" rx="7" ry="9" fill="#171211"/><ellipse cx="286" cy="242" rx="7" ry="9" fill="#171211"/>
+  <path d="M254 244c-6 18-8 33-2 40 6 5 13 5 21 1" fill="none" stroke="#4d2b22" stroke-width="6" stroke-linecap="round"/>
+  <path d="M221 303c20 19 50 20 71 0" fill="none" stroke="#58251f" stroke-width="8" stroke-linecap="round"/>
+  <g fill="none" stroke="#f7c6d9" stroke-width="7"><circle cx="181" cy="266" r="12"/><circle cx="331" cy="266" r="12"/></g>
+  <path d="M18 420V92" stroke="#101314" stroke-width="8" stroke-linecap="round" opacity=".12"/>
+</svg>

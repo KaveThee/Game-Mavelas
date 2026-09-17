@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Didier Drogba</title>
+  <desc id="desc">Stylized vector portrait of Didier Drogba for the Game Mavelas Who Am I game.</desc>
+  <rect width="512" height="512" rx="56" fill="#d7ff3f"/>
+  <circle cx="72" cy="76" r="34" fill="#101314" opacity=".08"/><circle cx="447" cy="126" r="58" fill="#101314" opacity=".08"/>
+  <path d="M89 512c10-112 68-173 167-173s157 61 167 173Z" fill="#034694"/>
+  <path d="M215 328h82v73c-22 22-60 22-82 0Z" fill="#56301f"/>
+  <path d="M177 202c10-68 43-101 79-101s69 33 79 101c-24-20-50-30-79-30s-55 10-79 30Z" fill="#3e281f" opacity=".32"/>
+  <ellipse cx="256" cy="245" rx="82" ry="111" fill="#56301f"/>
+  <ellipse cx="176" cy="254" rx="15" ry="25" fill="#56301f"/><ellipse cx="336" cy="254" rx="15" ry="25" fill="#56301f"/>
+  <path d="M205 218c14-9 29-9 43-1M264 217c14-8 29-8 43 1" fill="none" stroke="#241713" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="226" cy="242" rx="7" ry="9" fill="#171211"/><ellipse cx="286" cy="242" rx="7" ry="9" fill="#171211"/>
+  <path d="M254 244c-6 18-8 33-2 40 6 5 13 5 21 1" fill="none" stroke="#4d2b22" stroke-width="6" stroke-linecap="round"/>
+  <path d="M221 303c20 19 50 20 71 0" fill="none" stroke="#58251f" stroke-width="8" stroke-linecap="round"/>
+  <path d="M218 377h76l-8 44h-60Z" fill="#ffffff"/><text x="256" y="407" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="900" fill="#034694">11</text>
+  <path d="M18 420V92" stroke="#101314" stroke-width="8" stroke-linecap="round" opacity=".12"/>
+</svg>

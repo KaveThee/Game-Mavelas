@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Uhuru Kenyatta</title>
+  <desc id="desc">Stylized vector portrait of Uhuru Kenyatta for the Game Mavelas Who Am I game.</desc>
+  <rect width="512" height="512" rx="56" fill="#d7ff3f"/>
+  <circle cx="72" cy="76" r="34" fill="#101314" opacity=".08"/><circle cx="447" cy="126" r="58" fill="#101314" opacity=".08"/>
+  <path d="M89 512c10-112 68-173 167-173s157 61 167 173Z" fill="#233449"/>
+  <path d="M215 328h82v73c-22 22-60 22-82 0Z" fill="#895741"/>
+  <path d="M171 210c5-75 43-112 85-112s80 37 85 112c-27-27-55-40-85-40s-58 13-85 40Z" fill="#181411"/>
+  <ellipse cx="256" cy="245" rx="82" ry="111" fill="#895741"/>
+  <ellipse cx="176" cy="254" rx="15" ry="25" fill="#895741"/><ellipse cx="336" cy="254" rx="15" ry="25" fill="#895741"/>
+  <path d="M205 218c14-9 29-9 43-1M264 217c14-8 29-8 43 1" fill="none" stroke="#241713" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="226" cy="242" rx="7" ry="9" fill="#171211"/><ellipse cx="286" cy="242" rx="7" ry="9" fill="#171211"/>
+  <path d="M254 244c-6 18-8 33-2 40 6 5 13 5 21 1" fill="none" stroke="#4d2b22" stroke-width="6" stroke-linecap="round"/>
+  <path d="M221 303c20 19 50 20 71 0" fill="none" stroke="#58251f" stroke-width="8" stroke-linecap="round"/>
+  <g fill="none" stroke="#151515" stroke-width="8"><rect x="194" y="223" width="54" height="37" rx="15"/><rect x="264" y="223" width="54" height="37" rx="15"/><path d="M248 239h16"/></g><path d="M246 379h20l15 82-25 26-25-26Z" fill="#b91c1c"/>
+  <path d="M18 420V92" stroke="#101314" stroke-width="8" stroke-linecap="round" opacity=".12"/>
+</svg>

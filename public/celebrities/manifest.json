@@ -58,5 +58,125 @@
     "name": "Joy Adamson",
     "src": "/celebrities/joy-adamson.svg",
     "alt": "Stylized portrait of Joy Adamson"
+  },
+  {
+    "slug": "william-ruto",
+    "name": "William Ruto",
+    "src": "/celebrities/william-ruto.svg",
+    "alt": "Stylized portrait of William Ruto"
+  },
+  {
+    "slug": "raila-odinga",
+    "name": "Raila Odinga",
+    "src": "/celebrities/raila-odinga.svg",
+    "alt": "Stylized portrait of Raila Odinga"
+  },
+  {
+    "slug": "uhuru-kenyatta",
+    "name": "Uhuru Kenyatta",
+    "src": "/celebrities/uhuru-kenyatta.svg",
+    "alt": "Stylized portrait of Uhuru Kenyatta"
+  },
+  {
+    "slug": "bien-aime-baraza",
+    "name": "Bien-Aimé Baraza",
+    "src": "/celebrities/bien-aime-baraza.svg",
+    "alt": "Stylized portrait of Bien-Aimé Baraza"
+  },
+  {
+    "slug": "nyashinski",
+    "name": "Nyashinski",
+    "src": "/celebrities/nyashinski.svg",
+    "alt": "Stylized portrait of Nyashinski"
+  },
+  {
+    "slug": "churchill-ndambuki",
+    "name": "Churchill Ndambuki",
+    "src": "/celebrities/churchill-ndambuki.svg",
+    "alt": "Stylized portrait of Churchill Ndambuki"
+  },
+  {
+    "slug": "victor-wanyama",
+    "name": "Victor Wanyama",
+    "src": "/celebrities/victor-wanyama.svg",
+    "alt": "Stylized portrait of Victor Wanyama"
+  },
+  {
+    "slug": "njugush",
+    "name": "Njugush",
+    "src": "/celebrities/njugush.svg",
+    "alt": "Stylized portrait of Njugush"
+  },
+  {
+    "slug": "eric-omondi",
+    "name": "Eric Omondi",
+    "src": "/celebrities/eric-omondi.svg",
+    "alt": "Stylized portrait of Eric Omondi"
+  },
+  {
+    "slug": "catherine-kamau",
+    "name": "Catherine Kamau",
+    "src": "/celebrities/catherine-kamau.svg",
+    "alt": "Stylized portrait of Catherine Kamau"
+  },
+  {
+    "slug": "nelson-mandela",
+    "name": "Nelson Mandela",
+    "src": "/celebrities/nelson-mandela.svg",
+    "alt": "Stylized portrait of Nelson Mandela"
+  },
+  {
+    "slug": "trevor-noah",
+    "name": "Trevor Noah",
+    "src": "/celebrities/trevor-noah.svg",
+    "alt": "Stylized portrait of Trevor Noah"
+  },
+  {
+    "slug": "burna-boy",
+    "name": "Burna Boy",
+    "src": "/celebrities/burna-boy.svg",
+    "alt": "Stylized portrait of Burna Boy"
+  },
+  {
+    "slug": "diamond-platnumz",
+    "name": "Diamond Platnumz",
+    "src": "/celebrities/diamond-platnumz.svg",
+    "alt": "Stylized portrait of Diamond Platnumz"
+  },
+  {
+    "slug": "mohamed-salah",
+    "name": "Mohamed Salah",
+    "src": "/celebrities/mohamed-salah.svg",
+    "alt": "Stylized portrait of Mohamed Salah"
+  },
+  {
+    "slug": "didier-drogba",
+    "name": "Didier Drogba",
+    "src": "/celebrities/didier-drogba.svg",
+    "alt": "Stylized portrait of Didier Drogba"
+  },
+  {
+    "slug": "davido",
+    "name": "Davido",
+    "src": "/celebrities/davido.svg",
+    "alt": "Stylized portrait of Davido"
+  },
+  {
+    "slug": "cristiano-ronaldo",
+    "name": "Cristiano Ronaldo",
+    "src": "/celebrities/cristiano-ronaldo.svg",
+    "alt": "Stylized portrait of Cristiano Ronaldo"
+  },
+  {
+    "slug": "lionel-messi",
+    "name": "Lionel Messi",
+    "src": "/celebrities/lionel-messi.svg",
+    "alt": "Stylized portrait of Lionel Messi"
+  },
+  {
+    "slug": "barack-obama",
+    "name": "Barack Obama",
+    "src": "/celebrities/barack-obama.svg",
+    "alt": "Stylized portrait of Barack Obama"
   }
 ]
