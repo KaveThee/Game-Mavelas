@@ -447,12 +447,19 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         code: string;
         status: string;
         selected_game: string;
+        role: "host" | "player" | "spectator";
       };
 
       sessionStorage.setItem("mavelas_room_id", roomData.id);
       sessionStorage.setItem("mavelas_player_name", name.trim());
       setLiveRoomId(roomData.id);
       setRoomCode(roomData.code);
+      // A display-first host must land on the dedicated host controller.
+      // This removes any ambiguity between the selector and ordinary players.
+      if (roomData.role === "host") {
+        window.location.assign(`/host/${roomData.code}`);
+        return;
+      }
       await refreshGameState(roomData.id);
       setScreen(roomData.status === "playing" ? "game" : "lobby");
     } catch (err) {
@@ -463,10 +470,18 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   }
 
   async function handleSelectGame(gameId: string) {
-    setSelectedGame(gameId);
-    if (isHost && liveRoomId && supabase) {
-      await supabase.from("rooms").update({ selected_game: gameId }).eq("id", liveRoomId);
+    if (!isHost || !liveRoomId || !supabase) return;
+    setConnectionError("");
+    const { error } = await supabase.rpc("select_room_game", {
+      p_room_id: liveRoomId,
+      p_selected_game: gameId,
+    });
+    if (error) {
+      setConnectionError(error.message);
+      return;
     }
+    setSelectedGame(gameId);
+    await refreshGameState();
   }
 
   async function handleStartGame() {
@@ -672,7 +687,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   }
 
   if (screen === "lobby") {
-    const playersList = serverState?.leaderboard.map((p) => p.name) || (name ? [name] : []);
+    const playersList = serverState?.leaderboard || (name ? [{ name, score: 0, is_me: true, is_host: isHost }] : []);
     return (
       <Lobby
         room={room}
@@ -907,7 +922,7 @@ function Lobby({
   onHome,
 }: {
   room: string;
-  players: string[];
+  players: LeaderboardEntry[];
   hostName: string;
   selectedGame: string;
   setSelectedGame: (id: string) => void;
@@ -976,19 +991,19 @@ function Lobby({
               </div>
               <div className="mt-4 flex flex-wrap gap-2.5">
                 {players.map((player) => {
-                  const isPlayerHost = player === hostName;
+                  const isPlayerHost = player.is_host;
                   return (
                     <div
-                      key={player}
+                      key={player.name + (player.is_me ? "-me" : "")}
                       className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-bold ${
                         isPlayerHost ? "bg-[#d7ff3f] text-[#101314]" : "bg-white/10 text-white"
                       }`}
                     >
-                      {isPlayerHost && <Crown size={15} fill="currentColor" />}
-                      <span>{player}</span>
-                      {isPlayerHost && (
-                        <span className="text-[11px] font-black uppercase tracking-wider opacity-70">Host</span>
-                      )}
+                      {isPlayerHost ? <Crown size={15} fill="currentColor" /> : <Users size={15} />}
+                      <span>{player.name}{player.is_me ? " (You)" : ""}</span>
+                      <span className="text-[11px] font-black uppercase tracking-wider opacity-70">
+                        {isPlayerHost ? "Host" : "Player"}
+                      </span>
                     </div>
                   );
                 })}
