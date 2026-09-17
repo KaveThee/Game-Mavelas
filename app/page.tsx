@@ -1016,7 +1016,6 @@ function GameScreen({
           {question ? (
             <div className="rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-9 shadow-2xl">
               <p className="text-xs font-black uppercase tracking-[.16em] text-black/45">
-screen-first-controllers
                 {isRevealed ? "Answer Revealed" : isWhoAmI ? "Conversation Round" : "Phone Controller"}
               </p>
               <h1 className="mt-2 text-3xl font-black leading-tight tracking-[-.06em] sm:text-4xl">
@@ -1056,15 +1055,6 @@ screen-first-controllers
                   </div>
                 )
               )}
-=======
-                {isRevealed ? "Answer Revealed" : "Phone Controller"}
-              </p>
-              <h1 className="mt-2 text-3xl font-black leading-tight tracking-[-.06em] sm:text-4xl">
-                {isRevealed ? "Round complete." : "Look at the shared screen."}
-              </h1>
-              {!isRevealed && <p className="mt-2 text-sm font-bold text-black/55">Tap the letter that matches the answer on TV.</p>}
-main
-
               {/* Options Grid */}
               {!isWhoAmI && <div className="mt-7 grid grid-cols-2 gap-3">
                 {question.options.map((option, index) => {
