@@ -316,7 +316,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setConnectionError("");
     setIsConnecting(true);
     try {
-      const user = await ensureGameIdentity();
+      await ensureGameIdentity();
       if (!supabase) throw new Error("Live game service not configured.");
       const { data: created, error: roomError } = await supabase.rpc("create_game_room", {
         p_nickname: name.trim(),
@@ -343,7 +343,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setConnectionError("");
     setIsConnecting(true);
     try {
-      const user = await ensureGameIdentity();
+      await ensureGameIdentity();
       if (!supabase) throw new Error("Live game service not configured.");
 
       const { data: joined, error: joinError } = await supabase.rpc("join_game_room", {
