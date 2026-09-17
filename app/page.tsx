@@ -67,15 +67,15 @@ const games = [
   },
   {
     id: "image",
-    title: "Guess the Image",
-    kicker: "Reveal & race",
+    title: "Clue Heist",
+    kicker: "Guess early or steal",
     icon: ScanLine,
     color: "blue",
-    template: undefined,
-    description: "Name what you see before the image becomes clear.",
-    meta: "Culture & Places · Coming Phase 4",
-    instructions: "An image is revealed pixel-by-pixel. Buzz in and guess first!",
-    isSupported: false,
+    template: "clue_heist_classic",
+    description: "Solve a hidden image from up to 20 clues. Every extra clue lowers its value, and missed answers open the heist.",
+    meta: "20 clues · 100→5 points · Live steals",
+    instructions: "The spotlight player guesses first. A wrong answer opens the steal to everyone else for half the available points.",
+    isSupported: true,
   },
 ];
 
@@ -126,6 +126,21 @@ type LeaderboardEntry = {
   is_host: boolean;
 };
 
+type ClueHeistState = {
+  clue_number: number;
+  current_value: number;
+  turn_phase: "spotlight" | "steal" | "revealed";
+  is_spotlight: boolean;
+  has_attempted: boolean;
+  can_guess: boolean;
+  clues: Array<{ position: number; text: string }>;
+  answer?: string | null;
+  image?: { url: string; alt: string } | null;
+  explanation?: string | null;
+  winner_name?: string | null;
+  awarded_points: number;
+};
+
 type ServerGameState = {
   room_id: string;
   room_code: string;
@@ -141,6 +156,7 @@ type ServerGameState = {
   current_question: CurrentQuestion | null;
   my_answer: MyAnswer;
   leaderboard: LeaderboardEntry[];
+  clue_heist?: ClueHeistState | null;
 };
 
 export function GameController({ hostCode }: { hostCode?: string } = {}) {
@@ -182,6 +198,12 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
       if (data) {
         const state = data as ServerGameState;
+        if (state.current_question?.game_mode === "guess_image") {
+          const { data: clueData } = await supabase.rpc("get_clue_heist_state", {
+            p_round_id: state.current_question.round_id,
+          });
+          state.clue_heist = clueData as ClueHeistState | null;
+        }
         setServerState(state);
         setIsHost(state.is_host);
         setHostName(state.host_name);
@@ -469,13 +491,51 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     }
   }
 
+  async function handleClueHeistGuess(guess: string) {
+    if (!supabase || !serverState?.current_question?.round_id || isSubmitting) return;
+    setConnectionError("");
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("submit_clue_heist_guess", {
+        p_round_id: serverState.current_question.round_id,
+        p_guess: guess.trim(),
+      });
+      if (error) throw error;
+      await refreshGameState();
+    } catch (err) {
+      setConnectionError(err instanceof Error ? err.message : "Could not submit your guess.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleNextClue() {
+    if (!supabase || !serverState?.current_question?.round_id || isSubmitting) return;
+    setConnectionError("");
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("advance_clue_heist_clue", {
+        p_round_id: serverState.current_question.round_id,
+      });
+      if (error) throw error;
+      await refreshGameState();
+    } catch (err) {
+      setConnectionError(err instanceof Error ? err.message : "Could not reveal the next clue.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   // Host Actions
   async function handleHostReveal() {
     if (!supabase || !liveRoomId || isSubmitting) return;
     setConnectionError("");
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.rpc("host_reveal_round", { p_room_id: liveRoomId });
+      const rpcName = serverState?.current_question?.game_mode === "guess_image"
+        ? "reveal_clue_heist_answer"
+        : "host_reveal_round";
+      const { error } = await supabase.rpc(rpcName, { p_room_id: liveRoomId });
       if (error) throw error;
       await refreshGameState();
     } catch (err) {
@@ -549,6 +609,8 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         error={connectionError}
         onAnswer={handleSubmitAnswer}
         onWhoAmIGuess={handleWhoAmIGuess}
+        onClueHeistGuess={handleClueHeistGuess}
+        onNextClue={handleNextClue}
         onReveal={handleHostReveal}
         onNext={handleHostAdvance}
         onEndGame={handleHostEndGame}
@@ -993,6 +1055,8 @@ function GameScreen({
   error,
   onAnswer,
   onWhoAmIGuess,
+  onClueHeistGuess,
+  onNextClue,
   onReveal,
   onNext,
   onEndGame,
@@ -1003,6 +1067,8 @@ function GameScreen({
   error: string;
   onAnswer: (optionId: string) => void;
   onWhoAmIGuess: (guess: string) => void;
+  onClueHeistGuess: (guess: string) => void;
+  onNextClue: () => void;
   onReveal: () => void;
   onNext: () => void;
   onEndGame: () => void;
@@ -1013,6 +1079,8 @@ function GameScreen({
   const isRevealed = state.phase === "revealed" || myAnswer.is_revealed;
   const hasAnswered = myAnswer.has_answered;
   const isWhoAmI = question?.game_mode === "who_am_i";
+  const isClueHeist = question?.game_mode === "guess_image";
+  const heist = state.clue_heist;
   const [guess, setGuess] = useState("");
 
   const modeLabel =
@@ -1033,7 +1101,7 @@ function GameScreen({
           </div>
 
           <div className="flex items-center gap-3">
-            {secondsRemaining !== null && !isRevealed && (
+            {secondsRemaining !== null && !isRevealed && !isClueHeist && (
               <div
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-mono text-lg font-black ${
                   secondsRemaining <= 5 ? "bg-rose-500/20 text-rose-400 animate-pulse" : "bg-white/10 text-[#d7ff3f]"
@@ -1054,12 +1122,36 @@ function GameScreen({
           {question ? (
             <div className="rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-9 shadow-2xl">
               <p className="text-xs font-black uppercase tracking-[.16em] text-black/45">
-                {isRevealed ? "Answer Revealed" : isWhoAmI ? "Conversation Round" : "Phone Controller"}
+                {isRevealed ? "Answer Revealed" : isClueHeist ? `Clue ${heist?.clue_number || 1} of 20 · ${heist?.current_value || 100} points` : isWhoAmI ? "Conversation Round" : "Phone Controller"}
               </p>
               <h1 className="mt-2 text-3xl font-black leading-tight tracking-[-.06em] sm:text-4xl">
-                {isRevealed ? "Round complete." : isWhoAmI ? question?.is_active_player ? "You are the guesser." : `${question?.active_player_name || "A player"} is the guesser.` : "Look at the shared screen."}
+                {isRevealed ? "Round complete." : isClueHeist ? heist?.turn_phase === "steal" ? "The heist is open!" : heist?.is_spotlight ? "You are in the spotlight." : `${question?.active_player_name || "A player"} has priority.` : isWhoAmI ? question?.is_active_player ? "You are the guesser." : `${question?.active_player_name || "A player"} is the guesser.` : "Look at the shared screen."}
               </h1>
-              {!isRevealed && !isWhoAmI && <p className="mt-2 text-sm font-bold text-black/55">Tap the letter that matches the answer on TV.</p>}
+              {!isRevealed && !isWhoAmI && !isClueHeist && <p className="mt-2 text-sm font-bold text-black/55">Tap the letter that matches the answer on TV.</p>}
+
+              {isClueHeist && !isRevealed && (
+                <div className="mt-6 space-y-4">
+                  <div className={`rounded-2xl p-4 ${heist?.turn_phase === "steal" ? "bg-rose-100 text-rose-950" : "bg-black/[.06]"}`}>
+                    <p className="text-sm font-black">
+                      {heist?.turn_phase === "steal"
+                        ? `STEAL OPEN · worth ${Math.ceil((heist.current_value || 100) / 2)} points`
+                        : heist?.is_spotlight
+                        ? "Guess now or request another clue."
+                        : `Watch the clues. You can steal if ${question?.active_player_name || "the spotlight player"} misses.`}
+                    </p>
+                  </div>
+                  {heist?.can_guess && (
+                    <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); if (guess.trim()) onClueHeistGuess(guess); }}>
+                      <input value={guess} onChange={(event) => setGuess(event.target.value)} maxLength={80} placeholder="Type your guess…" className="min-w-0 flex-1 rounded-xl border-2 border-[#101314] bg-white px-4 py-3 text-base font-bold outline-none focus:ring-4 focus:ring-[#39a7ff]/40" />
+                      <button className="button-dark px-4 text-sm" disabled={isSubmitting || !guess.trim()} type="submit">{heist.turn_phase === "steal" ? "Steal" : "Guess"}</button>
+                    </form>
+                  )}
+                  {(heist?.is_spotlight || isHost) && heist?.turn_phase !== "revealed" && (
+                    <button className="button-light w-full" onClick={onNextClue} disabled={isSubmitting}>Reveal next clue · value drops 5</button>
+                  )}
+                  {heist?.has_attempted && !heist.can_guess && <p className="text-center text-sm font-bold text-black/55">Your attempt is locked. Watch the heist continue.</p>}
+                </div>
+              )}
 
               {isWhoAmI && !isRevealed && (
                 question?.is_active_player ? (
@@ -1103,7 +1195,7 @@ function GameScreen({
                 )
               )}
               {/* Options Grid */}
-              {!isWhoAmI && <div className="mt-7 grid grid-cols-2 gap-3">
+              {!isWhoAmI && !isClueHeist && <div className="mt-7 grid grid-cols-2 gap-3">
                 {question.options.map((option, index) => {
                   const optionLetter = String.fromCharCode(65 + index);
                   const isSelected = myAnswer.selected_option_id === option.id;
@@ -1139,13 +1231,13 @@ function GameScreen({
                 <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl bg-black/[.06] p-4 text-center">
                   <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
                   <p className="text-sm font-bold text-black/70">
-                    {isWhoAmI ? `Guess locked in — waiting for ${state.host_name || "the host"} to reveal…` : `Answer locked in — waiting for ${state.host_name || "the host"} to reveal…`}
+                    {isWhoAmI ? `Guess locked in — waiting for ${state.host_name || "the host"} to reveal…` : isClueHeist ? "Attempt locked — the heist continues…" : `Answer locked in — waiting for ${state.host_name || "the host"} to reveal…`}
                   </p>
                 </div>
               )}
 
               {/* Timer expired before answer */}
-              {!hasAnswered && !isRevealed && secondsRemaining === 0 && (
+              {!hasAnswered && !isRevealed && !isClueHeist && secondsRemaining === 0 && (
                 <div className="mt-6 rounded-2xl bg-rose-100 p-4 text-center text-sm font-bold text-rose-900">
                   Time is up! Submissions closed for this question.
                 </div>
@@ -1172,6 +1264,10 @@ function GameScreen({
                     </p>
                     <span className="font-mono text-sm font-bold">Total: {state.my_score} pts</span>
                   </div>
+                  {isClueHeist && heist?.image && (
+                    <Image src={heist.image.url} alt={heist.image.alt} width={512} height={512} className="mt-5 aspect-square w-full rounded-3xl bg-white object-cover" />
+                  )}
+                  {isClueHeist && <p className="mt-4 text-2xl font-black">{heist?.answer}</p>}
                   {myAnswer.explanation && (
                     <p className="mt-2 text-sm font-medium leading-relaxed opacity-90">{myAnswer.explanation}</p>
                   )}
@@ -1198,7 +1294,7 @@ function GameScreen({
                       disabled={isSubmitting}
                       onClick={onReveal}
                     >
-                      <Eye size={16} /> Reveal Answer
+                      <Eye size={16} /> {isClueHeist ? "Reveal Mystery" : "Reveal Answer"}
                     </button>
                     <button
                       className="button-secondary flex items-center gap-2 text-sm"

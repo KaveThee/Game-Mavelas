@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { Gamepad2, Trophy, Users, Clock, QrCode, CheckCircle2, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { Gamepad2, Trophy, Users, Clock, QrCode, CheckCircle2 } from "lucide-react";
 import QRCode from "qrcode";
 import { ensureGameIdentity, supabase } from "@/lib/supabase";
 
@@ -27,6 +28,7 @@ type PublicRoom = {
 };
 
 type PublicRound = {
+  round_id?: string;
   position: number;
   game_mode: string;
   duration_seconds: number;
@@ -41,11 +43,23 @@ type PublicRound = {
   active_player_name?: string | null;
 };
 
+type PublicClueHeist = {
+  clue_number: number;
+  current_value: number;
+  turn_phase: "spotlight" | "steal" | "revealed";
+  clues: Array<{ position: number; text: string }>;
+  answer?: string | null;
+  image?: { url: string; alt: string } | null;
+  explanation?: string | null;
+  winner_name?: string | null;
+  awarded_points: number;
+};
+
 const gameName: Record<string, string> = {
   who_am_i: "Who Am I?",
   flag_frenzy: "Flag Frenzy",
   trivia: "Trivia Rush",
-  guess_image: "Guess the Image",
+  guess_image: "Clue Heist",
 };
 
 function getFlagDifficulty(position?: number): "Easy" | "Medium" | "Hard" | null {
@@ -62,6 +76,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const [error, setError] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
+  const [heist, setHeist] = useState<PublicClueHeist | null>(null);
 
   useEffect(() => {
     void params.then(({ code: roomCode }) => setCode(roomCode.toUpperCase()));
@@ -119,7 +134,15 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
         if (!roomData) throw new Error("This room is no longer available.");
 
         setRoom(roomData as PublicRoom);
-        setRound(roundData as PublicRound | null);
+        const nextRound = roundData as PublicRound | null;
+        setRound(nextRound);
+        if (nextRound?.game_mode === "guess_image") {
+          const { data: clueData, error: clueError } = await client.rpc("get_public_clue_heist_state", { p_room_code: code });
+          if (clueError) throw clueError;
+          setHeist(clueData as PublicClueHeist);
+        } else {
+          setHeist(null);
+        }
         setError("");
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "Could not load this room.");
@@ -154,6 +177,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const isResults = room?.phase === "results" || room?.status === "results";
   const isRevealed = room?.phase === "revealed" || round?.status === "revealed";
   const isWhoAmI = round?.game_mode === "who_am_i";
+  const isClueHeist = round?.game_mode === "guess_image";
   const flagDifficulty =
     round?.game_mode === "flag_frenzy" ? getFlagDifficulty(round.position) : null;
 
@@ -177,7 +201,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
           </div>
 
           <div className="flex items-center gap-4">
-            {!isLobby && !isResults && (
+            {!isLobby && !isResults && !isClueHeist && (
               <div
                 className={`flex items-center gap-2 rounded-2xl border px-5 py-3 font-mono text-2xl font-black transition-colors ${
                   secondsRemaining !== null && secondsRemaining <= 5
@@ -248,8 +272,38 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               </div>
 
               <h1 className="mt-4 max-w-4xl whitespace-pre-line text-5xl font-black leading-[.92] tracking-[-.07em] sm:text-7xl lg:text-8xl">
-                {isLobby ? "THE TABLE\nIS GATHERING." : isWhoAmI ? `${(round?.active_player_name || "The guesser").toUpperCase()}\nIS UP!` : round?.prompt || "PLAY\nTOGETHER."}
+                {isLobby ? "THE TABLE\nIS GATHERING." : isClueHeist ? heist?.turn_phase === "steal" ? "STEAL\nTHE POINTS!" : `${(round?.active_player_name || "The player").toUpperCase()}\nIN THE SPOTLIGHT` : isWhoAmI ? `${(round?.active_player_name || "The guesser").toUpperCase()}\nIS UP!` : round?.prompt || "PLAY\nTOGETHER."}
               </h1>
+
+              {isClueHeist && heist && heist.turn_phase !== "revealed" && (
+                <div className="mt-8 max-w-4xl space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="rounded-full bg-[#d7ff3f] px-4 py-2 font-mono text-xl font-black text-[#101314]">{heist.current_value} PTS</span>
+                    <span className="rounded-full border border-white/15 bg-white/[.06] px-4 py-2 text-sm font-black uppercase tracking-wider">Clue {heist.clue_number} / 20</span>
+                    {heist.turn_phase === "steal" && <span className="animate-pulse rounded-full bg-rose-500 px-4 py-2 text-sm font-black uppercase tracking-wider">Steal value: {Math.ceil(heist.current_value / 2)}</span>}
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {heist.clues.slice(-4).map((clue) => (
+                      <div key={clue.position} className="rounded-3xl border border-white/15 bg-white/[.07] p-5">
+                        <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">Clue {clue.position}</p>
+                        <p className="mt-2 text-xl font-black leading-tight sm:text-2xl">{clue.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {isClueHeist && heist?.turn_phase === "revealed" && (
+                <div className="mt-8 grid max-w-4xl gap-6 sm:grid-cols-[.75fr_1.25fr] sm:items-center">
+                  {heist.image && <Image src={heist.image.url} alt={heist.image.alt} width={512} height={512} className="aspect-square w-full rounded-[2rem] bg-white object-cover shadow-2xl" />}
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-[.16em] text-[#d7ff3f]">Mystery revealed</p>
+                    <p className="mt-2 text-5xl font-black tracking-[-.06em]">{heist.answer}</p>
+                    <p className="mt-3 text-lg font-bold text-white/65">{heist.winner_name ? `${heist.winner_name} won ${heist.awarded_points} points.` : "Nobody solved this mystery."}</p>
+                    {heist.explanation && <p className="mt-4 text-base leading-6 text-white/65">{heist.explanation}</p>}
+                  </div>
+                </div>
+              )}
 
               {isWhoAmI && !isRevealed && (
                 <div className="mt-8 max-w-3xl rounded-[2rem] border border-white/15 bg-white/[.06] p-6 sm:p-8">
@@ -272,7 +326,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
               {/* The TV is the source of truth for answer wording. Controllers
                   receive only matching A/B/C/D pads, keeping attention at the table. */}
-              {!isLobby && !isWhoAmI && round && round.options.length > 0 && (
+              {!isLobby && !isWhoAmI && !isClueHeist && round && round.options.length > 0 && (
                 <div className="mt-8 grid max-w-4xl grid-cols-2 gap-3 sm:gap-4">
                   {round.options.map((option) => {
                     const isCorrect = isRevealed && option.is_correct;
