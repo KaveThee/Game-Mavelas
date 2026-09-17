@@ -1,0 +1,62 @@
+[
+  {
+    "slug": "lupita-nyongo",
+    "name": "Lupita Nyong'o",
+    "src": "/celebrities/lupita-nyongo.svg",
+    "alt": "Stylized portrait of Lupita Nyong'o"
+  },
+  {
+    "slug": "eliud-kipchoge",
+    "name": "Eliud Kipchoge",
+    "src": "/celebrities/eliud-kipchoge.svg",
+    "alt": "Stylized portrait of Eliud Kipchoge"
+  },
+  {
+    "slug": "faith-kipyegon",
+    "name": "Faith Kipyegon",
+    "src": "/celebrities/faith-kipyegon.svg",
+    "alt": "Stylized portrait of Faith Kipyegon"
+  },
+  {
+    "slug": "wangari-maathai",
+    "name": "Wangari Maathai",
+    "src": "/celebrities/wangari-maathai.svg",
+    "alt": "Stylized portrait of Wangari Maathai"
+  },
+  {
+    "slug": "ferdinand-omanyala",
+    "name": "Ferdinand Omanyala",
+    "src": "/celebrities/ferdinand-omanyala.svg",
+    "alt": "Stylized portrait of Ferdinand Omanyala"
+  },
+  {
+    "slug": "david-rudisha",
+    "name": "David Rudisha",
+    "src": "/celebrities/david-rudisha.svg",
+    "alt": "Stylized portrait of David Rudisha"
+  },
+  {
+    "slug": "mwai-kibaki",
+    "name": "Mwai Kibaki",
+    "src": "/celebrities/mwai-kibaki.svg",
+    "alt": "Stylized portrait of Mwai Kibaki"
+  },
+  {
+    "slug": "dedan-kimathi",
+    "name": "Dedan Kimathi",
+    "src": "/celebrities/dedan-kimathi.svg",
+    "alt": "Stylized portrait of Dedan Kimathi"
+  },
+  {
+    "slug": "mekatilili-wa-menza",
+    "name": "Mekatilili wa Menza",
+    "src": "/celebrities/mekatilili-wa-menza.svg",
+    "alt": "Stylized portrait of Mekatilili wa Menza"
+  },
+  {
+    "slug": "joy-adamson",
+    "name": "Joy Adamson",
+    "src": "/celebrities/joy-adamson.svg",
+    "alt": "Stylized portrait of Joy Adamson"
+  }
+]

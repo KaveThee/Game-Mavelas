@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Lupita Nyong'o</title>
+  <desc id="desc">Stylized vector portrait of Lupita Nyong'o for the Game Mavelas Who Am I game.</desc>
+  <rect width="512" height="512" rx="56" fill="#d7ff3f"/>
+  <circle cx="72" cy="76" r="34" fill="#101314" opacity=".08"/><circle cx="447" cy="126" r="58" fill="#101314" opacity=".08"/>
+  <path d="M89 512c10-112 68-173 167-173s157 61 167 173Z" fill="#ef3340"/>
+  <path d="M215 328h82v73c-22 22-60 22-82 0Z" fill="#6f3d2b"/>
+  <path d="M164 213c9-78 57-119 92-119s84 41 92 119c-28-29-58-43-92-43s-64 14-92 43Z" fill="#14110f"/><circle cx="188" cy="144" r="14" fill="#14110f"/><circle cx="220" cy="115" r="17" fill="#14110f"/><circle cx="258" cy="106" r="18" fill="#14110f"/><circle cx="296" cy="116" r="17" fill="#14110f"/><circle cx="326" cy="147" r="14" fill="#14110f"/>
+  <ellipse cx="256" cy="245" rx="82" ry="111" fill="#6f3d2b"/>
+  <ellipse cx="176" cy="254" rx="15" ry="25" fill="#6f3d2b"/><ellipse cx="336" cy="254" rx="15" ry="25" fill="#6f3d2b"/>
+  <path d="M205 218c14-9 29-9 43-1M264 217c14-8 29-8 43 1" fill="none" stroke="#241713" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="226" cy="242" rx="7" ry="9" fill="#171211"/><ellipse cx="286" cy="242" rx="7" ry="9" fill="#171211"/>
+  <path d="M254 244c-6 18-8 33-2 40 6 5 13 5 21 1" fill="none" stroke="#4d2b22" stroke-width="6" stroke-linecap="round"/>
+  <path d="M221 303c20 19 50 20 71 0" fill="none" stroke="#58251f" stroke-width="8" stroke-linecap="round"/>
+  <g fill="none" stroke="#d7ff3f" stroke-width="7"><circle cx="181" cy="266" r="12"/><circle cx="331" cy="266" r="12"/></g>
+  <path d="M18 420V92" stroke="#101314" stroke-width="8" stroke-linecap="round" opacity=".12"/>
+</svg>
