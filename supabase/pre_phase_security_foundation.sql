@@ -250,10 +250,28 @@ grant execute on function public.get_public_room_state(text) to authenticated;
 grant execute on function public.get_public_round_state(text) to authenticated;
 
 -- Superseded/internal functions must not remain callable through the Data API.
-revoke all on function public.advance_game_round(uuid) from public, anon, authenticated;
-revoke all on function public.current_game_question(uuid) from public, anon, authenticated;
-revoke all on function public.assign_who_am_i_player() from public, anon, authenticated;
-revoke all on function public.rls_auto_enable() from public, anon, authenticated;
+-- Guard each revoke so this migration works across installations that skipped
+-- an older engine or optional Who Am I migration.
+do $
+declare
+  v_signature text;
+begin
+  foreach v_signature in array array[
+    'public.advance_game_round(uuid)',
+    'public.current_game_question(uuid)',
+    'public.assign_who_am_i_player()',
+    'public.rls_auto_enable()'
+  ]
+  loop
+    if to_regprocedure(v_signature) is not null then
+      execute format(
+        'revoke all on function %s from public, anon, authenticated',
+        v_signature
+      );
+    end if;
+  end loop;
+end
+$;
 
 -- Host room updates stay protected by the existing host-only UPDATE policy.
 -- Scores and roles are now mutable only through vetted SECURITY DEFINER RPCs.
