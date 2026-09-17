@@ -454,12 +454,11 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
       sessionStorage.setItem("mavelas_player_name", name.trim());
       setLiveRoomId(roomData.id);
       setRoomCode(roomData.code);
-      // A display-first host must land on the dedicated host controller.
-      // This removes any ambiguity between the selector and ordinary players.
-      if (roomData.role === "host") {
-        window.location.assign(`/host/${roomData.code}`);
-        return;
-      }
+      // Keep the first display scanner in this controller instead of relying on
+      // a route handoff. The server-issued role is authoritative and the
+      // immediate host state keeps the game chooser/start button available.
+      setIsHost(roomData.role === "host");
+      if (roomData.role === "host") setHostName(name.trim());
       await refreshGameState(roomData.id);
       setScreen(roomData.status === "playing" ? "game" : "lobby");
     } catch (err) {
