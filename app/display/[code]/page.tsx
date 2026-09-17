@@ -121,6 +121,13 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
     void load();
 
+    // Shared displays deliberately are not room members, so RLS can suppress
+    // raw-table Realtime events. Poll only the sanitized public RPC payloads
+    // to keep the projector synchronized without reopening table visibility.
+    const pollInterval = window.setInterval(() => {
+      void load();
+    }, 1000);
+
     const channel = client
       .channel("display-" + code)
       .on("postgres_changes", { event: "*", schema: "public", table: "rooms" }, load)
@@ -130,6 +137,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
       .subscribe();
 
     return () => {
+      window.clearInterval(pollInterval);
       void client.removeChannel(channel);
     };
   }, [code]);
