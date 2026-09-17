@@ -487,7 +487,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   async function handleStartGame() {
     const game = playableGames.find((g) => g.id === selectedGame);
     if (!game || !game.template) {
-      setConnectionError("Please choose Trivia Rush or Flag Frenzy for Phase 3.");
+      setConnectionError("Choose a playable game or Trivia Vault branch first.");
       return;
     }
     if (!supabase || !liveRoomId) return;
@@ -951,7 +951,7 @@ function Lobby({
             </h1>
             <p className="mt-4 max-w-md text-base leading-7 text-white/60">
               {isHost
-                ? "Select a playable deck (Trivia Rush or Flag Frenzy), open the shared TV screen, and start when ready."
+                ? "Choose a game or Trivia Vault branch, open the shared TV screen, and start when everyone is ready."
                 : `Waiting for ${hostName || "the host"} to start the game. Keep this phone open.`}
             </p>
 
