@@ -28,11 +28,11 @@ import {
 } from "lucide-react";
 import { ensureGameIdentity, supabase } from "@/lib/supabase";
 
-const games = [
+const triviaBranches = [
   {
     id: "trivia-kenya",
-    title: "Kenya Vault",
-    kicker: "Easy → Medium → Hard",
+    title: "Home Turf",
+    kicker: "Kenya & East Africa",
     icon: Sparkles,
     color: "pink",
     template: "trivia_vault_kenya",
@@ -43,8 +43,8 @@ const games = [
   },
   {
     id: "trivia-scitech",
-    title: "Science & Tech Vault",
-    kicker: "Think fast, level up",
+    title: "Brain Buzz",
+    kicker: "Science & Technology",
     icon: Sparkles,
     color: "pink",
     template: "trivia_vault_scitech",
@@ -55,14 +55,29 @@ const games = [
   },
   {
     id: "trivia-mix",
-    title: "Trivia Vault: Mix",
-    kicker: "The all-rounder",
+    title: "Anything Goes",
+    kicker: "Mixed knowledge",
     icon: Sparkles,
     color: "pink",
     template: "trivia_vault_mix",
     description: "A broad general-knowledge run for mixed groups, with a clear Easy, Medium and Hard finish.",
     meta: "15 questions · 100 → 200 points · Mixed topics",
     instructions: "Every correct tap scores. The final round is worth the most, so no lead is safe.",
+    isSupported: true,
+  },
+];
+
+const games = [
+  {
+    id: "trivia",
+    title: "Trivia Vault",
+    kicker: "Pick your branch",
+    icon: Sparkles,
+    color: "pink",
+    description: "Choose a themed quiz branch: Home Turf, Brain Buzz, or Anything Goes.",
+    meta: "3 branches · 15 questions · 100 → 200 points",
+    template: "",
+    instructions: "Pick a Trivia Vault branch before starting.",
     isSupported: true,
   },
   {
@@ -102,6 +117,8 @@ const games = [
     isSupported: true,
   },
 ];
+
+const playableGames = [...triviaBranches, ...games.filter((game) => game.id !== "trivia")];
 
 function getFlagDifficulty(position?: number): "Easy" | "Medium" | "Hard" | null {
   if (!position) return null;
@@ -199,7 +216,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
 
   const room = useMemo(() => serverState?.room_code || roomCode || "MAV1", [serverState?.room_code, roomCode]);
-  const chosenGame = games.find((g) => g.id === selectedGame) ?? games[0];
+  const chosenGame = playableGames.find((g) => g.id === selectedGame) ?? playableGames[0];
 
   // Refresh Game State from Server Authority
   const refreshGameState = useCallback(async (roomId?: string) => {
@@ -235,7 +252,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
         // Sync selected game if in lobby
         if (state.status === "lobby") {
-          const matched = games.find((g) => g.id === state.selected_game || g.template === state.selected_game);
+          const matched = playableGames.find((g) => g.id === state.selected_game || g.template === state.selected_game);
           if (matched) setSelectedGame(matched.id);
           setScreen("lobby");
         } else if (state.status === "playing") {
@@ -453,7 +470,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   }
 
   async function handleStartGame() {
-    const game = games.find((g) => g.id === selectedGame);
+    const game = playableGames.find((g) => g.id === selectedGame);
     if (!game || !game.template) {
       setConnectionError("Please choose Trivia Rush or Flag Frenzy for Phase 3.");
       return;
@@ -894,7 +911,7 @@ function Lobby({
   hostName: string;
   selectedGame: string;
   setSelectedGame: (id: string) => void;
-  chosenGame: typeof games[number];
+  chosenGame: typeof playableGames[number];
   isHost: boolean;
   isPlaying: boolean;
   copied: boolean;
@@ -993,24 +1010,34 @@ function Lobby({
               <>
                 <p className="eyebrow-dark">Select Game Mode</p>
                 <div className="mt-4 space-y-2">
-                  {games.map((game) => {
+                  <div className="rounded-2xl bg-[#101314] p-3 text-white">
+                    <div className="flex items-center gap-2 px-2 pb-2 text-sm font-black">
+                      <Sparkles size={17} className="text-[#d7ff3f]" /> Trivia Vault
+                    </div>
+                    <div className="space-y-1">
+                      {triviaBranches.map((game) => (
+                        <button
+                          className={`game-select ${selectedGame === game.id ? "selected" : ""}`}
+                          key={game.id}
+                          onClick={() => setSelectedGame(game.id)}
+                        >
+                          <span>{game.title}</span>
+                          {selectedGame === game.id && <span className="pick-dot" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {games.filter((game) => game.id !== "trivia").map((game) => {
                     const Icon = game.icon;
                     return (
                       <button
-                        className={`game-select ${selectedGame === game.id ? "selected" : ""} ${
-                          !game.isSupported ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
+                        className={`game-select ${selectedGame === game.id ? "selected" : ""}`}
                         key={game.id}
-                        disabled={!game.isSupported}
                         onClick={() => setSelectedGame(game.id)}
                       >
                         <Icon size={19} strokeWidth={2.5} />
                         <span>{game.title}</span>
-                        {!game.isSupported ? (
-                          <span className="text-[10px] font-bold text-black/40">Phase 4</span>
-                        ) : selectedGame === game.id ? (
-                          <span className="pick-dot" />
-                        ) : null}
+                        {selectedGame === game.id && <span className="pick-dot" />}
                       </button>
                     );
                   })}
