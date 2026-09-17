@@ -1142,6 +1142,7 @@ function GameScreen({
   const myAnswer = state.my_answer;
   const isHost = state.is_host;
   const isRevealed = state.phase === "revealed" || myAnswer.is_revealed;
+  const allAnswersIn = state.phase === "all_answered" && !isRevealed;
   const hasAnswered = myAnswer.has_answered;
   const isWhoAmI = question?.game_mode === "who_am_i";
   const isClueHeist = question?.game_mode === "guess_image";
@@ -1292,7 +1293,13 @@ function GameScreen({
               </div>}
 
               {/* Answer Status / Feedback */}
-              {hasAnswered && !isRevealed && (
+              {allAnswersIn && !isRevealed && (
+                <div className="mt-6 rounded-2xl bg-[#d7ff3f] p-4 text-center text-[#101314] shadow-sm">
+                  <p className="text-sm font-black">{isHost ? "EVERYONE IS LOCKED IN — reveal the answer!" : "EVERYONE’S IN. LET’S SEE WHO KNEW IT."}</p>
+                </div>
+              )}
+
+              {hasAnswered && !isRevealed && !allAnswersIn && (
                 <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl bg-black/[.06] p-4 text-center">
                   <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
                   <p className="text-sm font-bold text-black/70">
@@ -1359,7 +1366,7 @@ function GameScreen({
                       disabled={isSubmitting}
                       onClick={onReveal}
                     >
-                      <Eye size={16} /> {isClueHeist ? "Reveal Mystery" : "Reveal Answer"}
+                      <Eye size={16} /> {isClueHeist ? "Reveal Mystery" : allAnswersIn ? "Everyone’s In — Reveal" : "Reveal Answer"}
                     </button>
                     <button
                       className="button-secondary flex items-center gap-2 text-sm"
