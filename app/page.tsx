@@ -339,6 +339,25 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     }
   }
 
+  async function createDisplayRoom() {
+    setConnectionError("");
+    setIsConnecting(true);
+    try {
+      await ensureGameIdentity();
+      if (!supabase) throw new Error("Live game service not configured.");
+
+      const { data: created, error: roomError } = await supabase.rpc("create_display_room");
+      if (roomError || !created) throw roomError ?? new Error("Could not open a display room.");
+
+      const displayRoom = created as { code: string };
+      window.location.assign(`/display/${displayRoom.code}`);
+    } catch (err) {
+      setConnectionError(err instanceof Error ? err.message : "Could not open a display room.");
+    } finally {
+      setIsConnecting(false);
+    }
+  }
+
   async function joinLiveRoom() {
     setConnectionError("");
     setIsConnecting(true);
@@ -647,13 +666,22 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
               Kenyan & African-rooted party games. Big screen for the room, smartphones for the controllers.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <button className="button-lime" onClick={() => setScreen("create")}>
-                Create a game <Plus size={18} />
+              <button className="button-lime" onClick={createDisplayRoom} disabled={isConnecting}>
+                <Monitor size={18} />
+                {isConnecting ? "Opening display..." : "Display"}
               </button>
-              <button className="button-secondary" onClick={() => setScreen("join")}>
+              <button className="button-secondary" onClick={() => setScreen("create")} disabled={isConnecting}>
+                Create as host <Plus size={18} />
+              </button>
+              <button className="button-secondary" onClick={() => setScreen("join")} disabled={isConnecting}>
                 Join with code <ArrowRight size={17} />
               </button>
             </div>
+            {connectionError && (
+              <p role="alert" className="mt-4 max-w-lg text-sm font-bold text-rose-400">
+                {connectionError}
+              </p>
+            )}
             <div className="mt-10 flex items-center gap-5 text-sm text-white/45">
               <span className="flex items-center gap-2">
                 <Users size={16} /> 2–12 players
