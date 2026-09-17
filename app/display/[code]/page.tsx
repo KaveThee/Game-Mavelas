@@ -398,9 +398,9 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                   )}
                   <div>
                     <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">Instant Join</p>
-                    <p className="mt-1 text-xl font-black">Scan with your phone</p>
+                    <p className="mt-1 text-xl font-black">First phone becomes host</p>
                     <p className="mt-1.5 text-sm text-white/60">
-                      or enter code <strong className="font-mono text-[#d7ff3f]">{code}</strong> at{" "}
+                      Scan to claim the game controls. Everyone after that joins as a player — or enter code <strong className="font-mono text-[#d7ff3f]">{code}</strong> at{" "}
                       <span className="font-mono text-white/80">
                         {typeof window !== "undefined" ? window.location.host : "gamemavelas"}
                       </span>
@@ -455,7 +455,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                 ) : (
                   <div className="py-12 text-center text-black/40">
                     <p className="font-bold">Waiting for players to join…</p>
-                    <p className="text-xs mt-1">Scan the QR code to take the first seat</p>
+                    <p className="text-xs mt-1">First phone to scan claims host controls</p>
                   </div>
                 )}
               </div>
