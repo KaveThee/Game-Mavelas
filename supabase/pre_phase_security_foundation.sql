@@ -228,5 +228,32 @@ $$;
 revoke all on function public.join_game_room(text, text) from public, anon;
 grant execute on function public.join_game_room(text, text) to authenticated;
 
+-- Remove default PUBLIC/anon execution from the existing privileged game API.
+-- Only the deliberately exposed, internally-authorized functions remain callable
+-- by authenticated anonymous-player sessions.
+revoke all on function public.start_game(uuid, text) from public, anon;
+revoke all on function public.submit_game_answer(uuid, uuid) from public, anon;
+revoke all on function public.host_reveal_round(uuid) from public, anon;
+revoke all on function public.host_advance_round(uuid) from public, anon;
+revoke all on function public.host_end_game(uuid) from public, anon;
+revoke all on function public.get_player_game_state(uuid) from public, anon;
+revoke all on function public.get_public_room_state(text) from public, anon;
+revoke all on function public.get_public_round_state(text) from public, anon;
+
+grant execute on function public.start_game(uuid, text) to authenticated;
+grant execute on function public.submit_game_answer(uuid, uuid) to authenticated;
+grant execute on function public.host_reveal_round(uuid) to authenticated;
+grant execute on function public.host_advance_round(uuid) to authenticated;
+grant execute on function public.host_end_game(uuid) to authenticated;
+grant execute on function public.get_player_game_state(uuid) to authenticated;
+grant execute on function public.get_public_room_state(text) to authenticated;
+grant execute on function public.get_public_round_state(text) to authenticated;
+
+-- Superseded/internal functions must not remain callable through the Data API.
+revoke all on function public.advance_game_round(uuid) from public, anon, authenticated;
+revoke all on function public.current_game_question(uuid) from public, anon, authenticated;
+revoke all on function public.assign_who_am_i_player() from public, anon, authenticated;
+revoke all on function public.rls_auto_enable() from public, anon, authenticated;
+
 -- Host room updates stay protected by the existing host-only UPDATE policy.
 -- Scores and roles are now mutable only through vetted SECURITY DEFINER RPCs.
