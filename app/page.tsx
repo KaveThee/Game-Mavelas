@@ -368,9 +368,10 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     if (!serverState || serverState.phase !== "all_answered" || !liveRoomId || !supabase) return;
     const roundId = serverState.current_question?.round_id;
     if (!roundId) return;
+    const client = supabase;
 
     const timer = window.setTimeout(() => {
-      void supabase
+      void client
         .rpc("auto_reveal_round", { p_room_id: liveRoomId })
         .then(() => refreshGameState());
     }, 3100);
