@@ -252,7 +252,7 @@ grant execute on function public.get_public_round_state(text) to authenticated;
 -- Superseded/internal functions must not remain callable through the Data API.
 -- Guard each revoke so this migration works across installations that skipped
 -- an older engine or optional Who Am I migration.
-do $
+do $mavelas$
 declare
   v_signature text;
 begin
@@ -271,7 +271,7 @@ begin
     end if;
   end loop;
 end
-$;
+$mavelas$;
 
 -- Host room updates stay protected by the existing host-only UPDATE policy.
 -- Scores and roles are now mutable only through vetted SECURITY DEFINER RPCs.
