@@ -11,6 +11,9 @@ type PublicPlayer = {
   score: number;
   seat?: number | null;
   has_answered?: boolean;
+  role?: "host" | "player" | "spectator";
+  is_correct?: boolean | null;
+  points_awarded?: number | null;
 };
 
 type PublicRoom = {
@@ -179,18 +182,19 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const isLobby = !room || room.phase === "lobby" || room.phase === "selected" || room.status === "lobby";
   const isResults = room?.phase === "results" || room?.status === "results";
   const isRevealed = room?.phase === "revealed" || round?.status === "revealed";
+  const allAnswersIn = room?.phase === "all_answered" && !isRevealed;
   const isWhoAmI = round?.game_mode === "who_am_i";
   const isClueHeist = round?.game_mode === "guess_image";
   const flagDifficulty =
     round?.game_mode === "flag_frenzy" ? getFlagDifficulty(round.position) : null;
 
-  const totalPlayers = room?.players.length ?? 0;
+  const totalPlayers = room?.total_players ?? 0;
   const answeredCount = room?.answered_count ?? 0;
   const progressPercent = totalPlayers > 0 ? Math.min(100, Math.round((answeredCount / totalPlayers) * 100)) : 0;
 
   return (
-    <main className="min-h-screen bg-[#101314] px-6 py-6 text-white lg:px-14 lg:py-10">
-      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-7xl flex-col">
+    <main className="min-h-screen overflow-hidden bg-[#101314] px-4 py-4 text-white lg:px-8 lg:py-6">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1600px] flex-col">
         {/* Header */}
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -253,7 +257,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
           </section>
         ) : (
           /* Active Game or Lobby Screen */
-          <section className="my-auto grid items-center gap-10 py-8 lg:grid-cols-[1.2fr_.8fr]">
+          <section className="flex-1 grid min-h-0 items-center gap-6 py-5 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div>
               <div className="flex items-center gap-3">
                 <span className="text-sm font-black uppercase tracking-[.16em] text-[#d7ff3f]">
@@ -269,12 +273,19 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                       isRevealed ? "bg-[#d7ff3f] text-[#101314]" : "bg-white/10 text-white/70"
                     }`}
                   >
-                    {isRevealed ? "Revealed" : "Answering"}
+                    {isRevealed ? "Revealed" : allAnswersIn ? "All answers in" : "Answering"}
                   </span>
                 )}
               </div>
 
-              <h1 className="mt-4 max-w-4xl whitespace-pre-line text-5xl font-black leading-[.92] tracking-[-.07em] sm:text-7xl lg:text-8xl">
+              {allAnswersIn && (
+                <div className="mt-4 max-w-4xl rounded-3xl border border-[#d7ff3f]/60 bg-[#d7ff3f]/15 px-5 py-4 shadow-[0_0_35px_rgba(215,255,63,.16)] animate-pulse">
+                  <p className="text-xs font-black uppercase tracking-[.18em] text-[#d7ff3f]">Locked in</p>
+                  <p className="mt-1 text-2xl font-black sm:text-3xl">EVERYONE’S IN. LET’S SEE WHO KNEW IT.</p>
+                </div>
+              )}
+
+              <h1 className="mt-4 max-w-4xl whitespace-pre-line text-4xl font-black leading-[.94] tracking-[-.06em] sm:text-6xl lg:text-7xl">
                 {isLobby ? "THE TABLE\nIS GATHERING." : isClueHeist ? heist?.turn_phase === "steal" ? "STEAL\nTHE POINTS!" : `${(round?.active_player_name || "The player").toUpperCase()}\nIN THE SPOTLIGHT` : isWhoAmI ? `${(round?.active_player_name || "The guesser").toUpperCase()}\nIS UP!` : round?.prompt || "PLAY\nTOGETHER."}
               </h1>
 
@@ -367,13 +378,13 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
               {/* Answering Progress Bar on big screen */}
               {!isLobby && !isRevealed && (
-                <div className="mt-8 max-w-xl rounded-2xl border border-white/10 bg-white/[.04] p-5">
+                <div className={`mt-6 max-w-xl rounded-2xl border p-5 ${allAnswersIn ? "border-[#d7ff3f]/50 bg-[#d7ff3f]/10" : "border-white/10 bg-white/[.04]"}`}>
                   <div className="flex items-center justify-between text-sm font-bold">
                     <span className="flex items-center gap-2 text-white/70">
                       <Users size={16} /> Players Answered
                     </span>
                     <span className="font-mono text-[#d7ff3f] text-base">
-                      {answeredCount} / {totalPlayers}
+                      {allAnswersIn ? "ALL IN" : `${answeredCount} / ${totalPlayers}`}
                     </span>
                   </div>
                   <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-white/10">
@@ -415,7 +426,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
             </div>
 
             {/* Sidebar Leaderboard */}
-            <aside className="rounded-[2.5rem] bg-[#f0eee8] p-7 text-[#101314] shadow-2xl">
+            <aside className="max-h-[calc(100vh-170px)] overflow-hidden rounded-[2rem] bg-[#f0eee8] p-5 text-[#101314] shadow-2xl">
               <div className="flex items-center justify-between border-b border-black/10 pb-5">
                 <div className="flex items-center gap-3">
                   <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#101314] text-[#d7ff3f]">
@@ -433,12 +444,14 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                 </span>
               </div>
 
-              <div className="mt-6 space-y-2 max-h-[440px] overflow-y-auto pr-1">
+              <div className="mt-4 space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
                 {room?.players.length ? (
                   room.players.map((player, index) => (
                     <div
-                      className={`flex items-center justify-between rounded-2xl px-4 py-3.5 transition ${
-                        index === 0 && !isLobby ? "bg-[#d7ff3f]/40 border-2 border-[#101314]" : "bg-black/[.05]"
+                      className={`flex items-center justify-between rounded-2xl px-4 py-3 transition-all duration-700 ${
+                        isRevealed && player.is_correct
+                          ? "border-2 border-[#101314] bg-[#d7ff3f] animate-[pulse_1.1s_ease-in-out_2]"
+                          : index === 0 && !isLobby ? "bg-[#d7ff3f]/40 border-2 border-[#101314]" : "bg-black/[.05]"
                       }`}
                       key={player.name + index}
                     >
@@ -453,7 +466,12 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                           </span>
                         )}
                       </div>
-                      <span className="font-mono font-black text-lg">{player.score} pts</span>
+                      <span className="flex items-center gap-2 font-mono font-black text-lg">
+                        {isRevealed && player.is_correct && player.points_awarded ? (
+                          <span className="animate-bounce rounded-full bg-[#101314] px-2 py-1 text-xs text-[#d7ff3f]">+{player.points_awarded}</span>
+                        ) : null}
+                        {player.score} pts
+                      </span>
                     </div>
                   ))
                 ) : (
