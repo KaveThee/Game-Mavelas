@@ -16,6 +16,26 @@ const portraits = [
   { slug: "dedan-kimathi", name: "Dedan Kimathi", skin: "#633826", hair: "dread-cap", outfit: "#4d5a38", accent: "#c19a5b", beard: true },
   { slug: "mekatilili-wa-menza", name: "Mekatilili wa Menza", skin: "#75432f", hair: "headcloth", outfit: "#8b2f2f", accent: "#e9b949", earrings: true },
   { slug: "joy-adamson", name: "Joy Adamson", skin: "#e2b293", hair: "wave", outfit: "#b7834b", accent: "#f4e7ce" },
+  { slug: "william-ruto", name: "William Ruto", skin: "#744633", hair: "short", outfit: "#243447", accent: "#f2b134", tie: true },
+  { slug: "raila-odinga", name: "Raila Odinga", skin: "#71432f", hair: "silver", outfit: "#183153", accent: "#d11f2f", glasses: true, tie: true },
+  { slug: "uhuru-kenyatta", name: "Uhuru Kenyatta", skin: "#895741", hair: "short", outfit: "#233449", accent: "#b91c1c", glasses: true, tie: true },
+  { slug: "bien-aime-baraza", name: "Bien-Aimé Baraza", skin: "#603522", hair: "locs", outfit: "#161616", accent: "#f0c75e", beard: true },
+  { slug: "nyashinski", name: "Nyashinski", skin: "#70402d", hair: "fade", outfit: "#202020", accent: "#ffffff", beard: true },
+  { slug: "churchill-ndambuki", name: "Churchill Ndambuki", skin: "#724430", hair: "bald", outfit: "#8b1e2d", accent: "#ffffff", glasses: true },
+  { slug: "victor-wanyama", name: "Victor Wanyama", skin: "#5d3324", hair: "short", outfit: "#c8102e", accent: "#ffffff", badge: "KEN" },
+  { slug: "njugush", name: "Njugush", skin: "#754633", hair: "fade", outfit: "#f3a712", accent: "#101314" },
+  { slug: "eric-omondi", name: "Eric Omondi", skin: "#633623", hair: "crop", outfit: "#111111", accent: "#d7ff3f" },
+  { slug: "catherine-kamau", name: "Catherine Kamau", skin: "#85523c", hair: "braids", outfit: "#8f2d56", accent: "#f7c6d9", earrings: true },
+  { slug: "nelson-mandela", name: "Nelson Mandela", skin: "#6d402e", hair: "silver", outfit: "#d4a84f", accent: "#244b7a" },
+  { slug: "trevor-noah", name: "Trevor Noah", skin: "#9a644b", hair: "curls", outfit: "#222936", accent: "#ffffff", tie: true },
+  { slug: "burna-boy", name: "Burna Boy", skin: "#633824", hair: "locs", outfit: "#181818", accent: "#e6bd55", beard: true },
+  { slug: "diamond-platnumz", name: "Diamond Platnumz", skin: "#75422d", hair: "fade", outfit: "#f5f5f5", accent: "#d4af37", beard: true },
+  { slug: "mohamed-salah", name: "Mohamed Salah", skin: "#a56848", hair: "curls", outfit: "#c8102e", accent: "#ffffff", beard: true, badge: "11" },
+  { slug: "didier-drogba", name: "Didier Drogba", skin: "#56301f", hair: "bald", outfit: "#034694", accent: "#ffffff", badge: "11" },
+  { slug: "davido", name: "Davido", skin: "#71402b", hair: "fade", outfit: "#202020", accent: "#d4af37", beard: true },
+  { slug: "cristiano-ronaldo", name: "Cristiano Ronaldo", skin: "#c98b66", hair: "sidepart", outfit: "#ffffff", accent: "#111111", badge: "CR7" },
+  { slug: "lionel-messi", name: "Lionel Messi", skin: "#d49a76", hair: "sidepart", outfit: "#75aadb", accent: "#ffffff", beard: true, badge: "10" },
+  { slug: "barack-obama", name: "Barack Obama", skin: "#915f47", hair: "short", outfit: "#233449", accent: "#4b6fa9", tie: true },
 ];
 
 const hair = {
@@ -28,6 +48,10 @@ const hair = {
   'dread-cap': '<path d="M160 220c2-90 39-137 96-137s94 47 96 137c-29-38-61-57-96-57s-67 19-96 57Z" fill="#3e392c"/><path d="M170 137c55-38 112-38 172 0l-13-46H183Z" fill="#4d5a38"/><path d="M174 176c-18 60-13 105 0 139M198 153c-14 71-9 124 3 164M314 153c14 71 9 124-3 164M338 176c18 60 13 105 0 139" fill="none" stroke="#1b1713" stroke-width="12" stroke-linecap="round"/>',
   headcloth: '<path d="M157 218c3-87 45-134 99-134s96 47 99 134c-29-36-62-54-99-54s-70 18-99 54Z" fill="#8b2f2f"/><path d="M166 126c51-53 127-52 179 1-65-15-123-16-179-1Z" fill="#e9b949"/><path d="M315 103c37-35 55-18 44 17-15 17-29 31-45 43Z" fill="#8b2f2f"/>',
   wave: '<path d="M162 224c1-85 40-132 94-132s93 47 94 132c-29-40-60-59-94-59s-65 19-94 59Z" fill="#c99158"/><path d="M169 158c22-24 35-6 55-28 18-20 35 3 55-13 18-14 33-2 58 24" fill="none" stroke="#f0c287" stroke-width="14" stroke-linecap="round"/>',
+  bald: '<path d="M177 202c10-68 43-101 79-101s69 33 79 101c-24-20-50-30-79-30s-55 10-79 30Z" fill="#3e281f" opacity=".32"/>',
+  locs: '<path d="M161 218c4-86 42-132 95-132s91 46 95 132c-29-34-61-51-95-51s-66 17-95 51Z" fill="#15110f"/><path d="M177 147c-22 84-20 141-5 188M202 118c-17 94-13 164 0 214M310 118c17 94 13 164 0 214M335 147c22 84 20 141 5 188" fill="none" stroke="#15110f" stroke-width="15" stroke-linecap="round"/>',
+  curls: '<path d="M162 213c6-83 44-128 94-128s88 45 94 128c-28-32-60-48-94-48s-66 16-94 48Z" fill="#171210"/><g fill="#29201c"><circle cx="188" cy="130" r="22"/><circle cx="226" cy="103" r="23"/><circle cx="269" cy="99" r="24"/><circle cx="310" cy="114" r="23"/><circle cx="333" cy="150" r="20"/></g>',
+  sidepart: '<path d="M170 208c6-77 44-116 86-116s80 39 86 116c-27-27-56-41-86-41s-59 14-86 41Z" fill="#2b211d"/><path d="M208 112c34-20 75-19 107 4" fill="none" stroke="#46352d" stroke-width="13" stroke-linecap="round"/>',
 };
 
 function svg(p) {
@@ -35,6 +59,7 @@ function svg(p) {
   const earrings = p.earrings ? `<g fill="none" stroke="${p.accent}" stroke-width="7"><circle cx="181" cy="266" r="12"/><circle cx="331" cy="266" r="12"/></g>` : '';
   const beard = p.beard ? '<path d="M207 293c12 43 86 43 98 0-11 68-87 73-98 0Z" fill="#1a1512" opacity=".92"/>' : '';
   const runner = p.runner ? `<path d="M221 377h70l-8 42h-54Z" fill="${p.accent}"/><text x="256" y="408" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" font-weight="900" fill="${p.outfit}">KEN</text>` : '';
+  const badge = p.badge ? `<path d="M218 377h76l-8 44h-60Z" fill="${p.accent}"/><text x="256" y="407" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="900" fill="${p.outfit}">${p.badge}</text>` : '';
   const tie = p.tie ? `<path d="M246 379h20l15 82-25 26-25-26Z" fill="${p.accent}"/>` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">${p.name}</title>
@@ -50,7 +75,7 @@ function svg(p) {
   <ellipse cx="226" cy="242" rx="7" ry="9" fill="#171211"/><ellipse cx="286" cy="242" rx="7" ry="9" fill="#171211"/>
   <path d="M254 244c-6 18-8 33-2 40 6 5 13 5 21 1" fill="none" stroke="#4d2b22" stroke-width="6" stroke-linecap="round"/>
   <path d="M221 303c20 19 50 20 71 0" fill="none" stroke="#58251f" stroke-width="8" stroke-linecap="round"/>
-  ${beard}${glasses}${earrings}${runner}${tie}
+  ${beard}${glasses}${earrings}${runner}${badge}${tie}
   <path d="M18 420V92" stroke="#101314" stroke-width="8" stroke-linecap="round" opacity=".12"/>
 </svg>\n`;
 }
