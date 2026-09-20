@@ -1036,6 +1036,8 @@ function Lobby({
                     <div className="space-y-1">
                       {triviaBranches.map((game) => (
                         <button
+                          type="button"
+                          aria-pressed={selectedGame === game.id}
                           className={`game-select ${selectedGame === game.id ? "selected" : ""}`}
                           key={game.id}
                           onClick={() => setSelectedGame(game.id)}
@@ -1050,6 +1052,8 @@ function Lobby({
                     const Icon = game.icon;
                     return (
                       <button
+                        type="button"
+                        aria-pressed={selectedGame === game.id}
                         className={`game-select ${selectedGame === game.id ? "selected" : ""}`}
                         key={game.id}
                         onClick={() => setSelectedGame(game.id)}
