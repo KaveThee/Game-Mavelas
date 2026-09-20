@@ -10,7 +10,6 @@ import {
   Copy,
   Crown,
   ExternalLink,
-  Eye,
   Gamepad2,
   ImageIcon,
   LogOut,
@@ -20,7 +19,6 @@ import {
   Plus,
   RotateCcw,
   ScanLine,
-  SkipForward,
   Sparkles,
   Trophy,
   Users,
@@ -200,11 +198,24 @@ type ServerGameState = {
   my_score: number;
   total_players: number;
   answered_count: number;
+  slowest_player_name?: string | null;
   current_question: CurrentQuestion | null;
   my_answer: MyAnswer;
   leaderboard: LeaderboardEntry[];
   clue_heist?: ClueHeistState | null;
 };
+
+function getAllInMessage(name?: string | null, position = 0) {
+  if (!name) return "Everyone is locked in. The truth is loading…";
+  const lines = [
+    `${name} made that timer earn its salary.`,
+    `${name} has finally released the suspense.`,
+    `${name} arrived fashionably late to the answer party.`,
+    `${name} checked the answer twice. Very responsible. Very dramatic.`,
+  ];
+  const seed = [...name].reduce((total, character) => total + character.charCodeAt(0), position);
+  return lines[seed % lines.length];
+}
 
 export function GameController({ hostCode }: { hostCode?: string } = {}) {
   const [screen, setScreen] = useState<Screen>("home");
@@ -249,6 +260,12 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
       if (data) {
         const state = data as ServerGameState;
+        if (state.phase === "all_answered") {
+          const { data: publicState } = await supabase.rpc("get_public_room_state", {
+            p_room_code: state.room_code,
+          });
+          state.slowest_player_name = (publicState as { slowest_player_name?: string | null } | null)?.slowest_player_name;
+        }
         if (state.current_question?.game_mode === "guess_image") {
           const { data: clueData } = await supabase.rpc("get_clue_heist_state", {
             p_round_id: state.current_question.round_id,
@@ -377,16 +394,32 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   }, [liveRoomId, refreshGameState]);
 
   // Any connected controller can safely trigger the server-checked reveal.
-  // The RPC only works once the room has been locked for at least three seconds.
+  // All-in rounds pause for the intermission; expired timers reveal immediately.
   useEffect(() => {
-    if (livePhase !== "all_answered" || !liveRoundId || !liveRoomId || !supabase) return;
+    const allInReady = livePhase === "all_answered";
+    const timerExpired = livePhase === "playing" && secondsRemaining === 0;
+    if ((!allInReady && !timerExpired) || !liveRoundId || !liveRoomId || !supabase) return;
     const client = supabase;
 
     const timer = window.setTimeout(() => {
       void client
         .rpc("auto_reveal_round", { p_room_id: liveRoomId })
         .then(() => refreshGameState());
-    }, 3100);
+    }, allInReady ? 3100 : 250);
+
+    return () => window.clearTimeout(timer);
+  }, [livePhase, liveRoundId, liveRoomId, refreshGameState, secondsRemaining]);
+
+  // Reveals stay on screen long enough to celebrate, then the server advances.
+  useEffect(() => {
+    if (livePhase !== "revealed" || !liveRoundId || !liveRoomId || !supabase) return;
+    const client = supabase;
+
+    const timer = window.setTimeout(() => {
+      void client
+        .rpc("auto_advance_round", { p_room_id: liveRoomId })
+        .then(() => refreshGameState());
+    }, 6200);
 
     return () => window.clearTimeout(timer);
   }, [livePhase, liveRoundId, liveRoomId, refreshGameState]);
@@ -609,59 +642,6 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     }
   }
 
-  // Host Actions
-  async function handleHostReveal() {
-    if (!supabase || !liveRoomId || isSubmitting) return;
-    setConnectionError("");
-    setIsSubmitting(true);
-    try {
-      const rpcName = serverState?.current_question?.game_mode === "guess_image"
-        ? "reveal_clue_heist_answer"
-        : "host_reveal_round";
-      const { error } = await supabase.rpc(rpcName, { p_room_id: liveRoomId });
-      if (error) throw error;
-      await refreshGameState();
-    } catch (err) {
-      setConnectionError(err instanceof Error ? err.message : "Could not reveal round.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleHostAdvance() {
-    if (!supabase || !liveRoomId || isSubmitting) return;
-    setConnectionError("");
-    setIsSubmitting(true);
-    try {
-      const { data, error } = await supabase.rpc("host_advance_round", { p_room_id: liveRoomId });
-      if (error) throw error;
-      if ((data as { finished?: boolean }).finished) {
-        setScreen("results");
-      }
-      await refreshGameState();
-    } catch (err) {
-      setConnectionError(err instanceof Error ? err.message : "Could not advance round.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleHostEndGame() {
-    if (!supabase || !liveRoomId || isSubmitting) return;
-    setConnectionError("");
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase.rpc("host_end_game", { p_room_id: liveRoomId });
-      if (error) throw error;
-      await refreshGameState();
-      setScreen("results");
-    } catch (err) {
-      setConnectionError(err instanceof Error ? err.message : "Could not end game.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   function handleCopyInvite() {
     if (typeof window === "undefined") return;
     const url = `${window.location.origin}/?code=${room}`;
@@ -694,9 +674,6 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         onWhoAmIGuess={handleWhoAmIGuess}
         onClueHeistGuess={handleClueHeistGuess}
         onNextClue={handleNextClue}
-        onReveal={handleHostReveal}
-        onNext={handleHostAdvance}
-        onEndGame={handleHostEndGame}
       />
     );
   }
@@ -1150,9 +1127,6 @@ function GameScreen({
   onWhoAmIGuess,
   onClueHeistGuess,
   onNextClue,
-  onReveal,
-  onNext,
-  onEndGame,
 }: {
   state: ServerGameState;
   secondsRemaining: number | null;
@@ -1162,13 +1136,9 @@ function GameScreen({
   onWhoAmIGuess: (guess: string) => void;
   onClueHeistGuess: (guess: string) => void;
   onNextClue: () => void;
-  onReveal: () => void;
-  onNext: () => void;
-  onEndGame: () => void;
 }) {
   const question = state.current_question;
   const myAnswer = state.my_answer;
-  const isHost = state.is_host;
   const isRevealed = state.phase === "revealed" || myAnswer.is_revealed;
   const allAnswersIn = state.phase === "all_answered" && !isRevealed;
   const hasAnswered = myAnswer.has_answered;
@@ -1183,6 +1153,18 @@ function GameScreen({
 
   return (
     <main className="min-h-screen bg-[#101314] text-white">
+      {allAnswersIn && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#101314] px-6 text-center">
+          <div className="max-w-xl">
+            <p className="text-xs font-black uppercase tracking-[.24em] text-[#d7ff3f]">Pens down. Ego pending.</p>
+            <h1 className="mt-5 text-5xl font-black leading-[.9] tracking-[-.07em] sm:text-7xl">ALL ANSWERS<br />ARE IN.</h1>
+            <p className="mt-7 text-xl font-black text-white/75">
+              {getAllInMessage(state.slowest_player_name, question?.position)}
+            </p>
+            <p className="mt-7 animate-pulse text-sm font-bold uppercase tracking-[.18em] text-[#d7ff3f]">Reveal incoming…</p>
+          </div>
+        </div>
+      )}
       <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-5 pb-12 pt-5 sm:px-8">
         {/* Game Header */}
         <header className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -1239,7 +1221,7 @@ function GameScreen({
                       <button className="button-dark px-4 text-sm" disabled={isSubmitting || !guess.trim()} type="submit">{heist.turn_phase === "steal" ? "Steal" : "Guess"}</button>
                     </form>
                   )}
-                  {(heist?.is_spotlight || isHost) && heist?.turn_phase !== "revealed" && (
+                  {heist?.is_spotlight && heist?.turn_phase !== "revealed" && (
                     <button className="button-light w-full" onClick={onNextClue} disabled={isSubmitting}>Reveal next clue · value drops 5</button>
                   )}
                   {heist?.has_attempted && !heist.can_guess && <p className="text-center text-sm font-bold text-black/55">Your attempt is locked. Watch the heist continue.</p>}
@@ -1320,17 +1302,11 @@ function GameScreen({
               </div>}
 
               {/* Answer Status / Feedback */}
-              {allAnswersIn && !isRevealed && (
-                <div className="mt-6 rounded-2xl bg-[#d7ff3f] p-4 text-center text-[#101314] shadow-sm">
-                  <p className="text-sm font-black">EVERYONE’S IN. LET’S SEE WHO KNEW IT.</p>
-                </div>
-              )}
-
               {hasAnswered && !isRevealed && !allAnswersIn && (
                 <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl bg-black/[.06] p-4 text-center">
                   <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
                   <p className="text-sm font-bold text-black/70">
-                    {isWhoAmI ? `Guess locked in — waiting for ${state.host_name || "the host"} to reveal…` : isClueHeist ? "Attempt locked — the heist continues…" : `Answer locked in — waiting for ${state.host_name || "the host"} to reveal…`}
+                    {isWhoAmI ? "Guess locked in — reveal incoming…" : isClueHeist ? "Attempt locked — the heist continues…" : "Answer locked in — waiting for the table…"}
                   </p>
                 </div>
               )}
@@ -1381,59 +1357,11 @@ function GameScreen({
             </div>
           )}
 
-          {/* Host Action Bar */}
-          {isHost ? (
-            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.05] p-4">
-              <p className="text-xs font-black uppercase tracking-[.14em] text-[#d7ff3f] mb-3">Host Controls</p>
-              <div className="flex flex-wrap gap-3">
-                {!isRevealed ? (
-                  allAnswersIn ? (
-                    <div className="flex-1 rounded-xl bg-[#d7ff3f] px-4 py-2.5 text-center text-sm font-black text-[#101314]">
-                      EVERYONE’S IN — revealing the answer…
-                    </div>
-                  ) : (
-                    <>
-                      <button
-                        className="button-lime flex-1 flex items-center justify-center gap-2 text-sm"
-                        disabled={isSubmitting}
-                        onClick={onReveal}
-                      >
-                        <Eye size={16} /> {isClueHeist ? "Reveal Mystery" : "Reveal Answer"}
-                      </button>
-                      <button
-                        className="button-secondary flex items-center gap-2 text-sm"
-                        disabled={isSubmitting}
-                        onClick={onNext}
-                      >
-                        <SkipForward size={16} /> Skip
-                      </button>
-                    </>
-                  )
-                ) : (
-                  <button
-                    className="button-lime flex-1 flex items-center justify-center gap-2 text-sm"
-                    disabled={isSubmitting}
-                    onClick={onNext}
-                  >
-                    <ArrowRight size={16} /> Next Question
-                  </button>
-                )}
-                <button
-                  className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-xs font-bold text-rose-300 hover:bg-rose-500/20"
-                  disabled={isSubmitting}
-                  onClick={onEndGame}
-                >
-                  End Game
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="mt-6 text-center text-xs text-white/50">
-              {isRevealed
-                ? `Waiting for ${state.host_name || "the host"} to load the next question…`
-                : "Your phone is your controller. Answers are locked once tapped."}
-            </p>
-          )}
+          <p className="mt-6 text-center text-xs text-white/50">
+            {isRevealed
+              ? "Next question loading automatically…"
+              : "Your phone is your controller. Answers are locked once tapped."}
+          </p>
         </section>
       </div>
     </main>
