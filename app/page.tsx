@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   ArrowRight,
   Check,
-  CheckCircle2,
   Clock,
   Copy,
   Crown,
@@ -24,7 +24,6 @@ import {
   Sparkles,
   Trophy,
   Users,
-  XCircle,
 } from "lucide-react";
 import { ensureGameIdentity, supabase } from "@/lib/supabase";
 
@@ -99,8 +98,8 @@ const games = [
     icon: ImageIcon,
     color: "lime",
     template: "who_am_i_kenya",
-    description: "One player at a time discovers a secret Kenyan icon through yes-or-no questions from the table.",
-    meta: "Kenyan Icons · Conversation rounds",
+    description: "One player at a time discovers a famous face through yes-or-no questions from the table.",
+    meta: "Kenyan, African & global icons · Conversation rounds",
     instructions: "The active player asks yes-or-no questions. Everyone else can see the secret identity and gives helpful clues. The active player then types a final guess.",
     isSupported: true,
   },
@@ -119,6 +118,13 @@ const games = [
 ];
 
 const playableGames = [...triviaBranches, ...games.filter((game) => game.id !== "trivia")];
+
+const modeNames: Record<string, string> = {
+  trivia: "Trivia Vault",
+  flag_frenzy: "Flag Frenzy",
+  who_am_i: "Who Am I?",
+  guess_image: "Clue Heist",
+};
 
 function getFlagDifficulty(position?: number): "Easy" | "Medium" | "Hard" | null {
   if (!position) return null;
@@ -217,6 +223,10 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
   const room = useMemo(() => serverState?.room_code || roomCode || "MAV1", [serverState?.room_code, roomCode]);
   const chosenGame = playableGames.find((g) => g.id === selectedGame) ?? playableGames[0];
+  const livePhase = serverState?.phase;
+  const liveRoundId = serverState?.current_question?.round_id;
+  const liveRoundClosesAt = serverState?.current_question?.closes_at;
+  const liveRoundPosition = serverState?.current_question?.position;
 
   // Refresh Game State from Server Authority
   const refreshGameState = useCallback(async (roomId?: string) => {
@@ -318,20 +328,23 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
     if (hostCode) return;
 
-    const params = new URLSearchParams(window.location.search);
-    const codeParam = params.get("code");
-    if (codeParam) {
-      setRoomCode(codeParam.toUpperCase().slice(0, 6));
-      setScreen("join");
-    }
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const codeParam = params.get("code");
+      if (codeParam) {
+        setRoomCode(codeParam.toUpperCase().slice(0, 6));
+        setScreen("join");
+      }
 
-    const savedRoomId = sessionStorage.getItem("mavelas_room_id");
-    const savedName = sessionStorage.getItem("mavelas_player_name");
-    if (savedName) setName(savedName);
-    if (savedRoomId) {
-      setLiveRoomId(savedRoomId);
-      void refreshGameState(savedRoomId);
-    }
+      const savedRoomId = sessionStorage.getItem("mavelas_room_id");
+      const savedName = sessionStorage.getItem("mavelas_player_name");
+      if (savedName) setName(savedName);
+      if (savedRoomId) {
+        setLiveRoomId(savedRoomId);
+        void refreshGameState(savedRoomId);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [hostCode, refreshGameState]);
 
   // Realtime subscription to room changes
@@ -339,7 +352,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     if (!liveRoomId || !supabase) return;
     const client = supabase;
 
-    void refreshGameState();
+    const initialRefresh = window.setTimeout(() => void refreshGameState(), 0);
 
     const channel = client
       .channel("room-player-" + liveRoomId)
@@ -358,6 +371,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
       .subscribe();
 
     return () => {
+      window.clearTimeout(initialRefresh);
       void client.removeChannel(channel);
     };
   }, [liveRoomId, refreshGameState]);
@@ -365,9 +379,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   // Any connected controller can safely trigger the server-checked reveal.
   // The RPC only works once the room has been locked for at least three seconds.
   useEffect(() => {
-    if (!serverState || serverState.phase !== "all_answered" || !liveRoomId || !supabase) return;
-    const roundId = serverState.current_question?.round_id;
-    if (!roundId) return;
+    if (livePhase !== "all_answered" || !liveRoundId || !liveRoomId || !supabase) return;
     const client = supabase;
 
     const timer = window.setTimeout(() => {
@@ -377,17 +389,16 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     }, 3100);
 
     return () => window.clearTimeout(timer);
-  }, [serverState?.phase, serverState?.current_question?.round_id, liveRoomId, refreshGameState]);
+  }, [livePhase, liveRoundId, liveRoomId, refreshGameState]);
 
   // Synchronized countdown timer for player controller
   useEffect(() => {
-    const round = serverState?.current_question;
-    if (!round?.closes_at || serverState?.phase !== "playing") {
-      setSecondsRemaining(null);
-      return;
+    if (!liveRoundClosesAt || livePhase !== "playing") {
+      const resetTimer = window.setTimeout(() => setSecondsRemaining(null), 0);
+      return () => window.clearTimeout(resetTimer);
     }
 
-    const targetTime = new Date(round.closes_at).getTime();
+    const targetTime = new Date(liveRoundClosesAt).getTime();
 
     const updateTimer = () => {
       const now = Date.now();
@@ -398,7 +409,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     updateTimer();
     const interval = setInterval(updateTimer, 500);
     return () => clearInterval(interval);
-  }, [serverState?.current_question?.closes_at, serverState?.phase, serverState?.current_question?.position]);
+  }, [liveRoundClosesAt, livePhase, liveRoundPosition]);
 
   async function createLiveRoom() {
     setConnectionError("");
@@ -1166,8 +1177,7 @@ function GameScreen({
   const heist = state.clue_heist;
   const [guess, setGuess] = useState("");
 
-  const modeLabel =
-    games.find((g) => g.template === question?.game_mode || g.id === question?.game_mode)?.title || "Game Mavelas";
+  const modeLabel = modeNames[question?.game_mode || ""] || "Game Mavelas";
   const flagDifficulty =
     question?.game_mode === "flag_frenzy" ? getFlagDifficulty(question.position) : null;
 
@@ -1312,7 +1322,7 @@ function GameScreen({
               {/* Answer Status / Feedback */}
               {allAnswersIn && !isRevealed && (
                 <div className="mt-6 rounded-2xl bg-[#d7ff3f] p-4 text-center text-[#101314] shadow-sm">
-                  <p className="text-sm font-black">{isHost ? "EVERYONE IS LOCKED IN — reveal the answer!" : "EVERYONE’S IN. LET’S SEE WHO KNEW IT."}</p>
+                  <p className="text-sm font-black">EVERYONE’S IN. LET’S SEE WHO KNEW IT.</p>
                 </div>
               )}
 
@@ -1354,7 +1364,7 @@ function GameScreen({
                     <span className="font-mono text-sm font-bold">Total: {state.my_score} pts</span>
                   </div>
                   {isClueHeist && heist?.image && (
-                    <Image src={heist.image.url} alt={heist.image.alt} width={512} height={512} className="mt-5 aspect-square w-full rounded-3xl bg-white object-cover" />
+                    <Image src={heist.image.url} alt={heist.image.alt} width={1200} height={900} className="mt-5 aspect-[4/3] w-full rounded-3xl bg-white object-contain" />
                   )}
                   {isClueHeist && <p className="mt-4 text-2xl font-black">{heist?.answer}</p>}
                   {myAnswer.explanation && (
@@ -1539,7 +1549,7 @@ function HostAccessScreen({ roomCode, error }: { roomCode: string; error: string
           The shared display has no controls by design.
         </p>
         {error && <p role="alert" className="mt-5 rounded-2xl bg-rose-500/10 p-4 text-sm font-bold text-rose-300">{error}</p>}
-        <a href="/" className="button-lime mt-8 w-fit">Return to Game Mavelas</a>
+        <Link href="/" className="button-lime mt-8 w-fit">Return to Game Mavelas</Link>
       </section>
     </main>
   );
