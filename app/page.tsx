@@ -642,6 +642,38 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     }
   }
 
+  async function handleReplayGame() {
+    if (!supabase || !liveRoomId || !isHost || isSubmitting) return;
+    setConnectionError("");
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("host_replay_game", { p_room_id: liveRoomId });
+      if (error) throw error;
+      await refreshGameState();
+      setScreen("game");
+    } catch (err) {
+      setConnectionError(err instanceof Error ? err.message : "Could not replay this game.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleReturnToLobby() {
+    if (!supabase || !liveRoomId || !isHost || isSubmitting) return;
+    setConnectionError("");
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("host_return_to_lobby", { p_room_id: liveRoomId });
+      if (error) throw error;
+      await refreshGameState();
+      setScreen("lobby");
+    } catch (err) {
+      setConnectionError(err instanceof Error ? err.message : "Could not return to the lobby.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   function handleCopyInvite() {
     if (typeof window === "undefined") return;
     const url = `${window.location.origin}/?code=${room}`;
@@ -684,7 +716,10 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         room={room}
         isHost={isHost}
         leaderboard={serverState.leaderboard}
-        onPlayAgain={isHost ? () => setScreen("lobby") : undefined}
+        isSubmitting={isSubmitting}
+        error={connectionError}
+        onReplay={isHost ? handleReplayGame : undefined}
+        onEndGame={isHost ? handleReturnToLobby : undefined}
         onHome={handleLeaveRoom}
       />
     );
@@ -1377,13 +1412,19 @@ function ResultsScreen({
   room,
   isHost,
   leaderboard,
-  onPlayAgain,
+  isSubmitting,
+  error,
+  onReplay,
+  onEndGame,
   onHome,
 }: {
   room: string;
   isHost: boolean;
   leaderboard: LeaderboardEntry[];
-  onPlayAgain?: () => void;
+  isSubmitting: boolean;
+  error: string;
+  onReplay?: () => void;
+  onEndGame?: () => void;
   onHome: () => void;
 }) {
   return (
@@ -1422,13 +1463,23 @@ function ResultsScreen({
           </div>
 
           <div className="mt-8 flex flex-col gap-3">
-            {isHost && onPlayAgain && (
-              <button className="button-dark w-full flex items-center justify-center gap-2" onClick={onPlayAgain}>
-                <RotateCcw size={16} /> Play Again
-              </button>
+            {isHost && onReplay && onEndGame ? (
+              <>
+                <button type="button" className="button-dark w-full flex items-center justify-center gap-2" disabled={isSubmitting} onClick={onReplay}>
+                  <RotateCcw size={16} /> {isSubmitting ? "Please wait…" : "Replay"}
+                </button>
+                <button type="button" className="w-full rounded-xl border-2 border-[#101314] px-4 py-3 text-sm font-black transition hover:bg-black/10 disabled:opacity-50" disabled={isSubmitting} onClick={onEndGame}>
+                  End Game · Return Everyone to Lobby
+                </button>
+              </>
+            ) : (
+              <p className="rounded-xl bg-black/[.06] px-4 py-3 text-sm font-bold text-black/60">
+                Waiting for the host to replay or return everyone to the lobby…
+              </p>
             )}
-            <button className="text-sm font-bold text-black/60 hover:text-black py-2" onClick={onHome}>
-              Return to Home
+            {error && <p role="alert" className="text-sm font-bold text-rose-700">{error}</p>}
+            <button type="button" className="text-sm font-bold text-black/60 hover:text-black py-2" onClick={onHome}>
+              Leave Room
             </button>
           </div>
         </section>
