@@ -27,6 +27,7 @@ type PublicRoom = {
   last_transition_at: string;
   total_players: number;
   answered_count: number;
+  slowest_player_name?: string | null;
   players: PublicPlayer[];
 };
 
@@ -73,6 +74,18 @@ function getFlagDifficulty(position?: number): "Easy" | "Medium" | "Hard" | null
   if (position <= 3) return "Easy";
   if (position <= 7) return "Medium";
   return "Hard";
+}
+
+function getAllInMessage(name?: string | null, position = 0) {
+  if (!name) return "Everyone is locked in. The truth is loading…";
+  const lines = [
+    `${name} made that timer earn its salary.`,
+    `${name} has finally released the suspense.`,
+    `${name} arrived fashionably late to the answer party.`,
+    `${name} checked the answer twice. Very responsible. Very dramatic.`,
+  ];
+  const seed = [...name].reduce((total, character) => total + character.charCodeAt(0), position);
+  return lines[seed % lines.length];
 }
 
 export default function SharedDisplay({ params }: { params: Promise<{ code: string }> }) {
@@ -194,6 +207,27 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#101314] px-4 py-4 text-white lg:px-8 lg:py-6">
+      {allAnswersIn && (
+        <div className="fixed inset-0 z-50 grid place-items-center overflow-hidden bg-[#101314] px-6 text-center">
+          <div className="absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-[#d7ff3f]/10 blur-3xl" />
+          <div className="absolute -right-20 bottom-1/4 h-80 w-80 rounded-full bg-[#ff3fa4]/10 blur-3xl" />
+          <div className="relative max-w-5xl">
+            <p className="text-sm font-black uppercase tracking-[.3em] text-[#d7ff3f]">Pens down. Phones down. Ego pending.</p>
+            <h1 className="mt-6 text-6xl font-black leading-[.88] tracking-[-.07em] sm:text-8xl lg:text-9xl">
+              ALL ANSWERS<br />ARE IN.
+            </h1>
+            <p className="mx-auto mt-8 max-w-3xl text-2xl font-black text-white/75 sm:text-4xl">
+              {getAllInMessage(room?.slowest_player_name, round?.position)}
+            </p>
+            <div className="mt-10 flex justify-center gap-3" aria-label="Answer reveal incoming">
+              {[0, 1, 2].map((dot) => (
+                <span key={dot} className="h-4 w-4 animate-pulse rounded-full bg-[#d7ff3f]" style={{ animationDelay: `${dot * 180}ms` }} />
+              ))}
+            </div>
+          </div>
+          <p className="absolute bottom-7 font-mono text-sm font-black uppercase tracking-[.2em] text-white/35">Room {code} · Reveal incoming</p>
+        </div>
+      )}
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1600px] flex-col">
         {/* Header */}
         <header className="flex items-center justify-between">
@@ -277,13 +311,6 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                   </span>
                 )}
               </div>
-
-              {allAnswersIn && (
-                <div className="mt-4 max-w-4xl rounded-3xl border border-[#d7ff3f]/60 bg-[#d7ff3f]/15 px-5 py-4 shadow-[0_0_35px_rgba(215,255,63,.16)] animate-pulse">
-                  <p className="text-xs font-black uppercase tracking-[.18em] text-[#d7ff3f]">Locked in</p>
-                  <p className="mt-1 text-2xl font-black sm:text-3xl">EVERYONE’S IN. LET’S SEE WHO KNEW IT.</p>
-                </div>
-              )}
 
               <h1 className="mt-4 max-w-4xl whitespace-pre-line text-4xl font-black leading-[.94] tracking-[-.06em] sm:text-6xl lg:text-7xl">
                 {isLobby ? "THE TABLE\nIS GATHERING." : isClueHeist ? heist?.turn_phase === "steal" ? "STEAL\nTHE POINTS!" : `${(round?.active_player_name || "The player").toUpperCase()}\nIN THE SPOTLIGHT` : isWhoAmI ? `${(round?.active_player_name || "The guesser").toUpperCase()}\nIS UP!` : round?.prompt || "PLAY\nTOGETHER."}
