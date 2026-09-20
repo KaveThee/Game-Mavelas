@@ -106,8 +106,8 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   // Server-synchronized countdown timer using closes_at
   useEffect(() => {
     if (!round?.closes_at || round.status !== "open") {
-      setSecondsRemaining(null);
-      return;
+      const resetTimer = window.setTimeout(() => setSecondsRemaining(null), 0);
+      return () => window.clearTimeout(resetTimer);
     }
 
     const targetTime = new Date(round.closes_at).getTime();
@@ -309,7 +309,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
               {isClueHeist && heist?.turn_phase === "revealed" && (
                 <div className="mt-8 grid max-w-4xl gap-6 sm:grid-cols-[.75fr_1.25fr] sm:items-center">
-                  {heist.image && <Image src={heist.image.url} alt={heist.image.alt} width={512} height={512} className="aspect-square w-full rounded-[2rem] bg-white object-cover shadow-2xl" />}
+                  {heist.image && <Image src={heist.image.url} alt={heist.image.alt} width={1200} height={900} className="aspect-[4/3] w-full rounded-[2rem] bg-white object-contain shadow-2xl" />}
                   <div>
                     <p className="text-sm font-black uppercase tracking-[.16em] text-[#d7ff3f]">Mystery revealed</p>
                     <p className="mt-2 text-5xl font-black tracking-[-.06em]">{heist.answer}</p>
@@ -377,7 +377,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               )}
 
               {/* Answering Progress Bar on big screen */}
-              {!isLobby && !isRevealed && (
+              {!isLobby && !isRevealed && !isWhoAmI && !isClueHeist && (
                 <div className={`mt-6 max-w-xl rounded-2xl border p-5 ${allAnswersIn ? "border-[#d7ff3f]/50 bg-[#d7ff3f]/10" : "border-white/10 bg-white/[.04]"}`}>
                   <div className="flex items-center justify-between text-sm font-bold">
                     <span className="flex items-center gap-2 text-white/70">
