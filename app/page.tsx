@@ -85,7 +85,7 @@ const games = [
     color: "yellow",
     template: "flag_frenzy_africa",
     description: "Spot the country from its flag before the countdown runs down.",
-    meta: "World flags · 3 Easy + 4 Medium + 3 Hard",
+    meta: "15, 30, 45 or 60 flags · 30 seconds each",
     instructions: "A flag will display on the screen. Tap the matching country name as fast as you can to score points!",
     isSupported: true,
   },
@@ -117,6 +117,9 @@ const games = [
 
 const playableGames = [...triviaBranches, ...games.filter((game) => game.id !== "trivia")];
 
+const flagRoundOptions = [15, 30, 45, 60] as const;
+type FlagRoundCount = (typeof flagRoundOptions)[number];
+
 const modeNames: Record<string, string> = {
   trivia: "Trivia Vault",
   flag_frenzy: "Flag Frenzy",
@@ -124,10 +127,10 @@ const modeNames: Record<string, string> = {
   guess_image: "Clue Heist",
 };
 
-function getFlagDifficulty(position?: number): "Easy" | "Medium" | "Hard" | null {
+function getFlagDifficulty(position?: number, totalRounds = 15): "Easy" | "Medium" | "Hard" | null {
   if (!position) return null;
-  if (position <= 3) return "Easy";
-  if (position <= 7) return "Medium";
+  if (position <= Math.round(totalRounds * 0.3)) return "Easy";
+  if (position <= Math.round(totalRounds * 0.7)) return "Medium";
   return "Hard";
 }
 
@@ -222,6 +225,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [selectedGame, setSelectedGame] = useState("trivia-kenya");
+  const [flagRoundCount, setFlagRoundCount] = useState<FlagRoundCount>(15);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState("");
   const [liveRoomId, setLiveRoomId] = useState("");
@@ -558,6 +562,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
       const { error } = await supabase.rpc("start_game", {
         p_room_id: liveRoomId,
         p_template_code: game.template,
+        ...(game.id === "flags" ? { p_round_count: flagRoundCount } : {}),
       });
       if (error) throw error;
       await refreshGameState();
@@ -735,6 +740,8 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         selectedGame={selectedGame}
         setSelectedGame={handleSelectGame}
         chosenGame={chosenGame}
+        flagRoundCount={flagRoundCount}
+        setFlagRoundCount={setFlagRoundCount}
         isHost={isHost}
         isPlaying={isSubmitting}
         copied={copied}
@@ -951,6 +958,8 @@ function Lobby({
   selectedGame,
   setSelectedGame,
   chosenGame,
+  flagRoundCount,
+  setFlagRoundCount,
   isHost,
   isPlaying,
   copied,
@@ -966,6 +975,8 @@ function Lobby({
   selectedGame: string;
   setSelectedGame: (id: string) => void;
   chosenGame: typeof playableGames[number];
+  flagRoundCount: FlagRoundCount;
+  setFlagRoundCount: (count: FlagRoundCount) => void;
   isHost: boolean;
   isPlaying: boolean;
   copied: boolean;
@@ -1107,6 +1118,34 @@ function Lobby({
                   <p className="mt-1 text-sm text-white/60">{chosenGame.description}</p>
                   <p className="mt-3 text-xs text-[#d7ff3f] font-bold">{chosenGame.meta}</p>
 
+                  {selectedGame === "flags" && (
+                    <fieldset className="mt-5 border-t border-white/10 pt-4">
+                      <legend className="text-xs font-black uppercase tracking-[.14em] text-white/55">
+                        Number of flags
+                      </legend>
+                      <div className="mt-3 grid grid-cols-4 gap-2">
+                        {flagRoundOptions.map((count) => (
+                          <button
+                            type="button"
+                            key={count}
+                            aria-pressed={flagRoundCount === count}
+                            onClick={() => setFlagRoundCount(count)}
+                            className={`rounded-xl border px-2 py-2.5 font-mono text-sm font-black transition ${
+                              flagRoundCount === count
+                                ? "border-[#d7ff3f] bg-[#d7ff3f] text-[#101314]"
+                                : "border-white/15 bg-white/[.06] text-white hover:border-white/40"
+                            }`}
+                          >
+                            {count}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-3 text-xs font-bold text-white/50">
+                        {flagRoundCount} flags · 30 seconds each
+                      </p>
+                    </fieldset>
+                  )}
+
                   {error && <p role="alert" className="mt-4 text-sm font-bold text-rose-300">{error}</p>}
 
                   <button
@@ -1188,7 +1227,7 @@ function GameScreen({
 
   const modeLabel = modeNames[question?.game_mode || ""] || "Game Mavelas";
   const flagDifficulty =
-    question?.game_mode === "flag_frenzy" ? getFlagDifficulty(question.position) : null;
+    question?.game_mode === "flag_frenzy" ? getFlagDifficulty(question.position, question.total_rounds) : null;
 
   return (
     <main className="min-h-screen bg-[#101314] text-white">

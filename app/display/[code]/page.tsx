@@ -34,6 +34,7 @@ type PublicRoom = {
 type PublicRound = {
   round_id?: string;
   position: number;
+  total_rounds: number;
   game_mode: string;
   duration_seconds: number;
   status: string;
@@ -69,10 +70,10 @@ const gameName: Record<string, string> = {
   guess_image: "Clue Heist",
 };
 
-function getFlagDifficulty(position?: number): "Easy" | "Medium" | "Hard" | null {
+function getFlagDifficulty(position?: number, totalRounds = 15): "Easy" | "Medium" | "Hard" | null {
   if (!position) return null;
-  if (position <= 3) return "Easy";
-  if (position <= 7) return "Medium";
+  if (position <= Math.round(totalRounds * 0.3)) return "Easy";
+  if (position <= Math.round(totalRounds * 0.7)) return "Medium";
   return "Hard";
 }
 
@@ -199,7 +200,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const isWhoAmI = round?.game_mode === "who_am_i";
   const isClueHeist = round?.game_mode === "guess_image";
   const flagDifficulty =
-    round?.game_mode === "flag_frenzy" ? getFlagDifficulty(round.position) : null;
+    round?.game_mode === "flag_frenzy" ? getFlagDifficulty(round.position, round.total_rounds) : null;
 
   const totalPlayers = room?.total_players ?? 0;
   const answeredCount = room?.answered_count ?? 0;
@@ -298,8 +299,8 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                   {isLobby
                     ? "Party Lobby"
                     : isRevealed
-                    ? `${title}${flagDifficulty ? ` · ${flagDifficulty}` : ""} · Round ${round?.position} Reveal`
-                    : `${title}${flagDifficulty ? ` · ${flagDifficulty}` : ""} · Round ${round?.position}`}
+                    ? `${title}${flagDifficulty ? ` · ${flagDifficulty}` : ""} · Round ${round?.position} of ${round?.total_rounds} Reveal`
+                    : `${title}${flagDifficulty ? ` · ${flagDifficulty}` : ""} · Round ${round?.position} of ${round?.total_rounds}`}
                 </span>
                 {!isLobby && (
                   <span
@@ -357,10 +358,13 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               {/* Media for Flag Frenzy */}
               {round?.media?.type === "flag" && (
                 <div className="mt-8 flex items-center justify-start">
-                  <img
+                  <Image
                     src={round.media.url}
                     alt={round.media.alt}
-                    className="h-44 w-auto max-w-md rounded-3xl bg-white object-contain p-4 shadow-2xl border-4 border-white/10"
+                    width={960}
+                    height={640}
+                    unoptimized
+                    className="h-56 w-auto max-w-full rounded-3xl border-4 border-white/10 bg-white object-contain p-4 shadow-2xl sm:h-64"
                   />
                 </div>
               )}
