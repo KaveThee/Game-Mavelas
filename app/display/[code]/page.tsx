@@ -118,7 +118,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
   // Server-synchronized countdown timer using closes_at
   useEffect(() => {
-    if (!round?.closes_at || round.status !== "open") {
+    if (!round?.closes_at || round.status !== "open" || room?.phase !== "playing") {
       const resetTimer = window.setTimeout(() => setSecondsRemaining(null), 0);
       return () => window.clearTimeout(resetTimer);
     }
@@ -134,7 +134,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
     updateTimer();
     const interval = setInterval(updateTimer, 500);
     return () => clearInterval(interval);
-  }, [round?.closes_at, round?.status, round?.position]);
+  }, [room?.phase, round?.closes_at, round?.status, round?.position]);
 
   // Realtime room and round listeners
   useEffect(() => {
