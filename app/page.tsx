@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Check,
+  ClipboardList,
   Clock,
   Copy,
   Crown,
@@ -19,8 +20,11 @@ import {
   Plus,
   RotateCcw,
   ScanLine,
+  Send,
+  Shapes,
   Sparkles,
   Trophy,
+  Trash2,
   Users,
 } from "lucide-react";
 import { ensureGameIdentity, supabase } from "@/lib/supabase";
@@ -97,8 +101,20 @@ const games = [
     color: "lime",
     template: "who_am_i_kenya",
     description: "One player at a time discovers a famous face through yes-or-no questions from the table.",
-    meta: "Kenyan, African & global icons · Conversation rounds",
-    instructions: "The active player asks yes-or-no questions. Everyone else can see the secret identity and gives helpful clues. The active player then types a final guess.",
+    meta: "90 seconds · Private question clipboard · Live table clues",
+    instructions: "The guesser has 90 seconds and a private clipboard. Everyone else sees the identity and can send short clues before the final guess.",
+    isSupported: true,
+  },
+  {
+    id: "logos",
+    title: "Logo Rush",
+    kicker: "Name that brand",
+    icon: Shapes,
+    color: "yellow",
+    template: "logo_rush_world",
+    description: "Recognise familiar international, African and Kenyan brands from their logos.",
+    meta: "67-logo library · 20 shuffled rounds · Global + local",
+    instructions: "Study the logo on the shared screen, then tap the matching A, B, C or D answer on your phone.",
     isSupported: true,
   },
   {
@@ -124,6 +140,7 @@ const modeNames: Record<string, string> = {
   trivia: "Trivia Vault",
   flag_frenzy: "Flag Frenzy",
   who_am_i: "Who Am I?",
+  logo_quiz: "Logo Rush",
   guess_image: "Clue Heist",
 };
 
@@ -189,6 +206,13 @@ type ClueHeistState = {
   awarded_points: number;
 };
 
+type WhoAmIClue = {
+  id: string;
+  text: string;
+  is_mine: boolean;
+  sender: string;
+};
+
 type ServerGameState = {
   room_id: string;
   room_code: string;
@@ -206,6 +230,7 @@ type ServerGameState = {
   my_answer: MyAnswer;
   leaderboard: LeaderboardEntry[];
   clue_heist?: ClueHeistState | null;
+  who_am_i_clues?: WhoAmIClue[];
 };
 
 function getAllInMessage(name?: string | null, position = 0) {
@@ -275,6 +300,12 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
             p_round_id: state.current_question.round_id,
           });
           state.clue_heist = clueData as ClueHeistState | null;
+        }
+        if (state.current_question?.game_mode === "who_am_i") {
+          const { data: whoClues } = await supabase.rpc("get_who_am_i_round_clues", {
+            p_round_id: state.current_question.round_id,
+          });
+          state.who_am_i_clues = (whoClues as WhoAmIClue[] | null) ?? [];
         }
         setServerState(state);
         setIsHost(state.is_host);
@@ -612,6 +643,25 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     }
   }
 
+  async function handleWhoAmIClue(clue: string) {
+    if (!supabase || !serverState?.current_question?.round_id || isSubmitting) return;
+
+    setConnectionError("");
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("submit_who_am_i_clue", {
+        p_round_id: serverState.current_question.round_id,
+        p_clue: clue.trim(),
+      });
+      if (error) throw error;
+      await refreshGameState();
+    } catch (err) {
+      setConnectionError(err instanceof Error ? err.message : "Could not share that clue.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleClueHeistGuess(guess: string) {
     if (!supabase || !serverState?.current_question?.round_id || isSubmitting) return;
     setConnectionError("");
@@ -709,6 +759,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         error={connectionError}
         onAnswer={handleSubmitAnswer}
         onWhoAmIGuess={handleWhoAmIGuess}
+        onWhoAmIClue={handleWhoAmIClue}
         onClueHeistGuess={handleClueHeistGuess}
         onNextClue={handleNextClue}
       />
@@ -1203,6 +1254,7 @@ function GameScreen({
   error,
   onAnswer,
   onWhoAmIGuess,
+  onWhoAmIClue,
   onClueHeistGuess,
   onNextClue,
 }: {
@@ -1212,6 +1264,7 @@ function GameScreen({
   error: string;
   onAnswer: (optionId: string) => void;
   onWhoAmIGuess: (guess: string) => void;
+  onWhoAmIClue: (clue: string) => Promise<void>;
   onClueHeistGuess: (guess: string) => void;
   onNextClue: () => void;
 }) {
@@ -1224,6 +1277,35 @@ function GameScreen({
   const isClueHeist = question?.game_mode === "guess_image";
   const heist = state.clue_heist;
   const [guess, setGuess] = useState("");
+  const [clueDraft, setClueDraft] = useState("");
+  const [clipboardDraft, setClipboardDraft] = useState("");
+  const [clipboards, setClipboards] = useState<Record<string, Array<{ id: string; text: string; checked: boolean }>>>({});
+
+  const clipboardKey = question?.round_id ? `mavelas-who-clipboard-${question.round_id}` : "";
+  const clipboard = clipboards[clipboardKey] ?? (() => {
+    if (!clipboardKey || typeof window === "undefined") return [];
+    try {
+      const saved = window.localStorage.getItem(clipboardKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  function saveClipboard(next: Array<{ id: string; text: string; checked: boolean }>) {
+    if (!clipboardKey) return;
+    setClipboards((current) => ({ ...current, [clipboardKey]: next }));
+    if (clipboardKey && typeof window !== "undefined") {
+      window.localStorage.setItem(clipboardKey, JSON.stringify(next));
+    }
+  }
+
+  function addClipboardQuestion() {
+    const text = clipboardDraft.trim();
+    if (!text) return;
+    saveClipboard([...clipboard, { id: crypto.randomUUID(), text, checked: false }]);
+    setClipboardDraft("");
+  }
 
   const modeLabel = modeNames[question?.game_mode || ""] || "Game Mavelas";
   const flagDifficulty =
@@ -1308,8 +1390,45 @@ function GameScreen({
 
               {isWhoAmI && !isRevealed && (
                 question?.is_active_player ? (
-                  <div className="mt-6 rounded-2xl bg-black/[.06] p-5">
-                    <p className="text-sm font-bold text-black/65">Ask the table yes-or-no questions. When you are ready, type your one final guess.</p>
+                  <div className="mt-6 space-y-4">
+                    <div className="rounded-2xl border-2 border-[#101314] bg-[#fffdf8] p-5 shadow-[0_6px_0_#101314]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <ClipboardList size={21} />
+                          <p className="font-black">My question clipboard</p>
+                        </div>
+                        <span className="rounded-full bg-black/10 px-2.5 py-1 font-mono text-xs font-black">PRIVATE</span>
+                      </div>
+                      <p className="mt-2 text-sm font-bold text-black/55">Keep track of what you have asked. These notes stay on this phone.</p>
+                      <form className="mt-4 flex gap-2" onSubmit={(event) => { event.preventDefault(); addClipboardQuestion(); }}>
+                        <input value={clipboardDraft} onChange={(event) => setClipboardDraft(event.target.value)} maxLength={80} placeholder="e.g. Am I an athlete?" className="min-w-0 flex-1 rounded-xl border-2 border-[#101314] bg-white px-4 py-3 text-sm font-bold outline-none focus:ring-4 focus:ring-[#d7ff3f]/50" />
+                        <button className="button-dark px-4 text-sm" disabled={!clipboardDraft.trim()} type="submit"><Plus size={17} /></button>
+                      </form>
+                      <div className="mt-3 max-h-52 space-y-2 overflow-y-auto">
+                        {clipboard.length === 0 && <p className="rounded-xl bg-black/[.05] p-3 text-center text-xs font-bold text-black/45">Your asked questions will appear here.</p>}
+                        {clipboard.map((item) => (
+                          <div key={item.id} className="flex items-center gap-2 rounded-xl bg-black/[.06] px-3 py-2.5">
+                            <button type="button" aria-label={item.checked ? "Mark question unanswered" : "Mark question answered"} onClick={() => saveClipboard(clipboard.map((entry) => entry.id === item.id ? { ...entry, checked: !entry.checked } : entry))} className={`grid h-6 w-6 shrink-0 place-items-center rounded-md border-2 border-[#101314] ${item.checked ? "bg-[#d7ff3f]" : "bg-white"}`}>
+                              {item.checked && <Check size={15} strokeWidth={4} />}
+                            </button>
+                            <span className={`min-w-0 flex-1 text-sm font-bold ${item.checked ? "text-black/40 line-through" : ""}`}>{item.text}</span>
+                            <button type="button" aria-label="Delete question" onClick={() => saveClipboard(clipboard.filter((entry) => entry.id !== item.id))} className="rounded-lg p-1.5 text-black/35 hover:bg-rose-100 hover:text-rose-700"><Trash2 size={16} /></button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-[#d7ff3f] p-5">
+                      <p className="text-xs font-black uppercase tracking-[.14em] text-black/50">Clues from the table</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {state.who_am_i_clues?.length ? state.who_am_i_clues.map((clue) => (
+                          <span key={clue.id} className="rounded-full border-2 border-[#101314] bg-white px-3 py-1.5 text-sm font-black">{clue.text}</span>
+                        )) : <p className="text-sm font-bold text-black/55">No clues yet. Keep interrogating the table.</p>}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-black/[.06] p-5">
+                    <p className="text-sm font-bold text-black/65">Ready to commit? You get one final identity guess.</p>
                     <form
                       className="mt-4 flex gap-2"
                       onSubmit={(event) => {
@@ -1329,21 +1448,31 @@ function GameScreen({
                         Guess
                       </button>
                     </form>
+                    </div>
                   </div>
                 ) : (
                   <div className="mt-6 rounded-2xl border-2 border-[#101314] bg-[#101314] p-5 text-[#d7ff3f] shadow-[0_6px_0_#101314]">
                     <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]/70">Keep it secret from {question?.active_player_name || "the guesser"}</p>
-                    {question?.media?.type === "image" && (
-                      <Image
-                        src={question.media.url}
-                        alt={question.media.alt}
-                        width={512}
-                        height={512}
-                        className="mt-4 aspect-square w-full max-w-sm rounded-3xl border-4 border-white/10 bg-[#d7ff3f] object-cover"
-                      />
-                    )}
-                    <p className="mt-2 text-3xl font-black tracking-[-.05em]">{question?.secret_identity || "Identity loading…"}</p>
-                    <p className="mt-2 text-sm font-bold text-white/65">Answer only yes-or-no questions and give fair clues.</p>
+                    <div className="mt-4 grid gap-5 sm:grid-cols-[.9fr_1.1fr] sm:items-start">
+                      <div>
+                        {question?.media?.type === "image" && (
+                          <Image src={question.media.url} alt={question.media.alt} width={512} height={512} unoptimized className="aspect-square w-full rounded-3xl border-4 border-white/10 bg-[#d7ff3f] object-cover" />
+                        )}
+                        <p className="mt-3 text-3xl font-black tracking-[-.05em]">{question?.secret_identity || "Identity loading…"}</p>
+                      </div>
+                      <div className="rounded-2xl bg-white p-4 text-[#101314]">
+                        <div className="flex items-center gap-2"><Send size={18} /><p className="font-black">Clue pad</p></div>
+                        <p className="mt-1 text-xs font-bold text-black/50">Send short, fair hints while the guesser asks questions.</p>
+                        <form className="mt-3 space-y-2" onSubmit={(event) => { event.preventDefault(); const clue = clueDraft.trim(); if (!clue) return; void onWhoAmIClue(clue).then(() => setClueDraft("")); }}>
+                          <input value={clueDraft} onChange={(event) => setClueDraft(event.target.value)} maxLength={48} placeholder="Politics, athlete, Black, world star…" className="w-full rounded-xl border-2 border-[#101314] px-3 py-3 text-sm font-bold outline-none focus:ring-4 focus:ring-[#d7ff3f]/50" />
+                          <button type="submit" disabled={isSubmitting || clueDraft.trim().length < 2} className="button-dark flex w-full items-center justify-center gap-2 text-sm"><Send size={16} /> Share clue</button>
+                        </form>
+                        <div className="mt-3 flex max-h-36 flex-wrap gap-1.5 overflow-y-auto">
+                          {state.who_am_i_clues?.map((clue) => <span key={clue.id} title={`From ${clue.sender}`} className={`rounded-full px-2.5 py-1 text-xs font-black ${clue.is_mine ? "bg-[#d7ff3f]" : "bg-black/10"}`}>{clue.text}</span>)}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-sm font-bold text-white/65">Answer yes-or-no questions honestly. Do not say the name out loud.</p>
                   </div>
                 )
               )}

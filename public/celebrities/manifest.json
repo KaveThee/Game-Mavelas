@@ -3,49 +3,105 @@
     "slug": "lupita-nyongo",
     "name": "Lupita Nyong'o",
     "src": "/celebrities/lupita-nyongo.svg",
-    "alt": "Stylized portrait of Lupita Nyong'o"
+    "alt": "Photograph of Lupita Nyong'o",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q3840847",
+    "source": "https://commons.wikimedia.org/wiki/File:LupitaNyongo-byPhilipRomano3.jpg",
+    "sourceFile": "LupitaNyongo-byPhilipRomano3.jpg",
+    "author": "PhilipRomano",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
   },
   {
     "slug": "eliud-kipchoge",
     "name": "Eliud Kipchoge",
     "src": "/celebrities/eliud-kipchoge.svg",
-    "alt": "Stylized portrait of Eliud Kipchoge"
+    "alt": "Photograph of Eliud Kipchoge",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q9124",
+    "source": "https://commons.wikimedia.org/wiki/File:Berlin-Marathon_2015_Runners_1.jpg",
+    "sourceFile": "Berlin-Marathon 2015 Runners 1.jpg",
+    "author": "Denis Barthel",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
   },
   {
     "slug": "faith-kipyegon",
     "name": "Faith Kipyegon",
     "src": "/celebrities/faith-kipyegon.svg",
-    "alt": "Stylized portrait of Faith Kipyegon"
+    "alt": "Photograph of Faith Kipyegon",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q3064656",
+    "source": "https://commons.wikimedia.org/wiki/File:Faith_Kipyegon_London_2017_(cropped2).jpg",
+    "sourceFile": "Faith Kipyegon London 2017 (cropped2).jpg",
+    "author": "Erik van Leeuwen, attribution: Erik van Leeuwen (bron: Wikipedia).",
+    "license": "GFDL",
+    "licenseUrl": "http://www.gnu.org/copyleft/fdl.html"
   },
   {
     "slug": "wangari-maathai",
     "name": "Wangari Maathai",
     "src": "/celebrities/wangari-maathai.svg",
-    "alt": "Stylized portrait of Wangari Maathai"
+    "alt": "Photograph of Wangari Maathai",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q46795",
+    "source": "https://commons.wikimedia.org/wiki/File:Wangari_Matthai_2001_(cropped).jpg",
+    "sourceFile": "Wangari Matthai 2001 (cropped).jpg",
+    "author": "Kingkongphoto &amp; www.celebrity-photos.com from Laurel Maryland, USA",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0"
   },
   {
     "slug": "ferdinand-omanyala",
     "name": "Ferdinand Omanyala",
     "src": "/celebrities/ferdinand-omanyala.svg",
-    "alt": "Stylized portrait of Ferdinand Omanyala"
+    "alt": "Photograph of Ferdinand Omanyala",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q106941983",
+    "source": "https://commons.wikimedia.org/wiki/File:Ferdinand_Omanyala_Budapest_2023.jpg",
+    "sourceFile": "Ferdinand Omanyala Budapest 2023.jpg",
+    "author": "Erik van Leeuwen, attribution: Erik van Leeuwen (bron: Wikipedia).",
+    "license": "GFDL",
+    "licenseUrl": "http://www.gnu.org/copyleft/fdl.html"
   },
   {
     "slug": "david-rudisha",
     "name": "David Rudisha",
     "src": "/celebrities/david-rudisha.svg",
-    "alt": "Stylized portrait of David Rudisha"
+    "alt": "Photograph of David Rudisha",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q1659",
+    "source": "https://commons.wikimedia.org/wiki/File:David_Rudisha_Daegu_2011.jpg",
+    "sourceFile": "David Rudisha Daegu 2011.jpg",
+    "author": "Erik van Leeuwen",
+    "license": "GFDL",
+    "licenseUrl": "http://www.gnu.org/copyleft/fdl.html"
   },
   {
     "slug": "mwai-kibaki",
     "name": "Mwai Kibaki",
     "src": "/celebrities/mwai-kibaki.svg",
-    "alt": "Stylized portrait of Mwai Kibaki"
+    "alt": "Photograph of Mwai Kibaki",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q57291",
+    "source": "https://commons.wikimedia.org/wiki/File:Mwai_Kibaki_(cropped).jpg",
+    "sourceFile": "Mwai Kibaki (cropped).jpg",
+    "author": "Foreign and Commonwealth Office",
+    "license": "OGL v1.0",
+    "licenseUrl": "http://NationalArchives.gov.uk/doc/open-government-licence/version/1/"
   },
   {
     "slug": "dedan-kimathi",
     "name": "Dedan Kimathi",
     "src": "/celebrities/dedan-kimathi.svg",
-    "alt": "Stylized portrait of Dedan Kimathi"
+    "alt": "Photograph of Dedan Kimathi",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q610057",
+    "source": "https://commons.wikimedia.org/wiki/File:Statue_of_Dedan_Kimathi_Nairobi,_Kenya.jpg",
+    "sourceFile": "Statue of Dedan Kimathi Nairobi, Kenya.jpg",
+    "author": "Murungaru at English Wikipedia",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:Statue_of_Dedan_Kimathi_Nairobi,_Kenya.jpg"
   },
   {
     "slug": "mekatilili-wa-menza",
@@ -57,25 +113,53 @@
     "slug": "joy-adamson",
     "name": "Joy Adamson",
     "src": "/celebrities/joy-adamson.svg",
-    "alt": "Stylized portrait of Joy Adamson"
+    "alt": "Photograph of Joy Adamson",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q93645",
+    "source": "https://commons.wikimedia.org/wiki/File:JoyAdamson%C3%89sElza.jpg",
+    "sourceFile": "JoyAdamsonÉsElza.jpg",
+    "author": "Beni7612",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
   },
   {
     "slug": "william-ruto",
     "name": "William Ruto",
     "src": "/celebrities/william-ruto.svg",
-    "alt": "Stylized portrait of William Ruto"
+    "alt": "Photograph of William Ruto",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q195725",
+    "source": "https://commons.wikimedia.org/wiki/File:William_Ruto_2023_(cropped).jpg",
+    "sourceFile": "William Ruto 2023 (cropped).jpg",
+    "author": "Presidenza della Repubblica",
+    "license": "Attribution",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:William_Ruto_2023_(cropped).jpg"
   },
   {
     "slug": "raila-odinga",
     "name": "Raila Odinga",
     "src": "/celebrities/raila-odinga.svg",
-    "alt": "Stylized portrait of Raila Odinga"
+    "alt": "Photograph of Raila Odinga",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q57657",
+    "source": "https://commons.wikimedia.org/wiki/File:Raila_Amolo_Odinga_2009_(cropped).jpg",
+    "sourceFile": "Raila Amolo Odinga 2009 (cropped).jpg",
+    "author": "World Economic Forum from Cologny, Switzerland",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0"
   },
   {
     "slug": "uhuru-kenyatta",
     "name": "Uhuru Kenyatta",
     "src": "/celebrities/uhuru-kenyatta.svg",
-    "alt": "Stylized portrait of Uhuru Kenyatta"
+    "alt": "Photograph of Uhuru Kenyatta",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q196070",
+    "source": "https://commons.wikimedia.org/wiki/File:PMO_IMG_5262_(40547346173)_(cropped).jpg",
+    "sourceFile": "PMO IMG 5262 (40547346173) (cropped).jpg",
+    "author": "Office of the Prime Minister - Ethiopia",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:PMO_IMG_5262_(40547346173)_(cropped).jpg"
   },
   {
     "slug": "bien-aime-baraza",
@@ -87,7 +171,14 @@
     "slug": "nyashinski",
     "name": "Nyashinski",
     "src": "/celebrities/nyashinski.svg",
-    "alt": "Stylized portrait of Nyashinski"
+    "alt": "Photograph of Nyashinski",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q47514403",
+    "source": "https://commons.wikimedia.org/wiki/File:Nyashinski.jpg",
+    "sourceFile": "Nyashinski.jpg",
+    "author": "Safari jpk",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
   },
   {
     "slug": "churchill-ndambuki",
@@ -99,7 +190,14 @@
     "slug": "victor-wanyama",
     "name": "Victor Wanyama",
     "src": "/celebrities/victor-wanyama.svg",
-    "alt": "Stylized portrait of Victor Wanyama"
+    "alt": "Photograph of Victor Wanyama",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q459897",
+    "source": "https://commons.wikimedia.org/wiki/File:Victor_Wanyama.jpg",
+    "sourceFile": "Victor Wanyama.jpg",
+    "author": "Glasgow Celtic",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0"
   },
   {
     "slug": "njugush",
@@ -117,66 +215,143 @@
     "slug": "catherine-kamau",
     "name": "Catherine Kamau",
     "src": "/celebrities/catherine-kamau.svg",
-    "alt": "Stylized portrait of Catherine Kamau"
+    "alt": "Photograph of Catherine Kamau",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q100433730",
+    "source": "https://commons.wikimedia.org/wiki/File:Caterine_Kamau_-_The_Kalasa_International_Award_2017.jpg",
+    "sourceFile": "Caterine Kamau - The Kalasa International Award 2017.jpg",
+    "author": "WachukaK",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
   },
   {
     "slug": "nelson-mandela",
     "name": "Nelson Mandela",
     "src": "/celebrities/nelson-mandela.svg",
-    "alt": "Stylized portrait of Nelson Mandela"
+    "alt": "Photograph of Nelson Mandela",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q8023",
+    "source": "https://commons.wikimedia.org/wiki/File:Nelson_Mandela_1994.jpg",
+    "sourceFile": "Nelson Mandela 1994.jpg",
+    "author": "Kingkongphoto &amp; www.celebrity-photos.com from Laurel",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0"
   },
   {
     "slug": "trevor-noah",
     "name": "Trevor Noah",
     "src": "/celebrities/trevor-noah.svg",
-    "alt": "Stylized portrait of Trevor Noah"
+    "alt": "Photograph of Trevor Noah",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q7839350",
+    "source": "https://commons.wikimedia.org/wiki/File:Trevor_Noah_(53554114243)_(portrait_crop).jpg",
+    "sourceFile": "Trevor Noah (53554114243) (portrait crop).jpg",
+    "author": "Web Summit Qatar",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
   },
   {
     "slug": "burna-boy",
     "name": "Burna Boy",
     "src": "/celebrities/burna-boy.svg",
-    "alt": "Stylized portrait of Burna Boy"
+    "alt": "Photograph of Burna Boy",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q17305712",
+    "source": "https://commons.wikimedia.org/wiki/File:Untold_2024_-Burna_Boy_(53926047977)_(cropped).jpg",
+    "sourceFile": "Untold 2024 -Burna Boy (53926047977) (cropped).jpg",
+    "author": "Nuță Lucian from Cluj-Napoca, Romania",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0"
   },
   {
     "slug": "diamond-platnumz",
     "name": "Diamond Platnumz",
     "src": "/celebrities/diamond-platnumz.svg",
-    "alt": "Stylized portrait of Diamond Platnumz"
+    "alt": "Photograph of Diamond Platnumz",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q15429574",
+    "source": "https://commons.wikimedia.org/wiki/File:Diamond_Platnumz.jpg",
+    "sourceFile": "Diamond Platnumz.jpg",
+    "author": "Peter Bennett / ZIFF",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
   },
   {
     "slug": "mohamed-salah",
     "name": "Mohamed Salah",
     "src": "/celebrities/mohamed-salah.svg",
-    "alt": "Stylized portrait of Mohamed Salah"
+    "alt": "Photograph of Mohamed Salah",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q1354960",
+    "source": "https://commons.wikimedia.org/wiki/File:Mohamed_Salah_Argentina_v_Egypt_7_July_2026-163_(cropped).jpg",
+    "sourceFile": "Mohamed Salah Argentina v Egypt 7 July 2026-163 (cropped).jpg",
+    "author": "Bryan Berlin",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
   },
   {
     "slug": "didier-drogba",
     "name": "Didier Drogba",
     "src": "/celebrities/didier-drogba.svg",
-    "alt": "Stylized portrait of Didier Drogba"
+    "alt": "Photograph of Didier Drogba",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q48892",
+    "source": "https://commons.wikimedia.org/wiki/File:Didier_Drogba_(2019)_(cropped).jpg",
+    "sourceFile": "Didier Drogba (2019) (cropped).jpg",
+    "author": "Y.Leclercq©",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
   },
   {
     "slug": "davido",
     "name": "Davido",
     "src": "/celebrities/davido.svg",
-    "alt": "Stylized portrait of Davido"
+    "alt": "Photograph of Davido",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q16234484",
+    "source": "https://commons.wikimedia.org/wiki/File:Davido_2024_(cropped).jpg",
+    "sourceFile": "Davido 2024 (cropped).jpg",
+    "author": "OLAMIPOSI DANIEL",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
   },
   {
     "slug": "cristiano-ronaldo",
     "name": "Cristiano Ronaldo",
     "src": "/celebrities/cristiano-ronaldo.svg",
-    "alt": "Stylized portrait of Cristiano Ronaldo"
+    "alt": "Photograph of Cristiano Ronaldo",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q11571",
+    "source": "https://commons.wikimedia.org/wiki/File:Cristiano_Ronaldo_Croatia_v_Portugal_2_July_2026-075_(cropped).jpg",
+    "sourceFile": "Cristiano Ronaldo Croatia v Portugal 2 July 2026-075 (cropped).jpg",
+    "author": "Bryan Berlin",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
   },
   {
     "slug": "lionel-messi",
     "name": "Lionel Messi",
     "src": "/celebrities/lionel-messi.svg",
-    "alt": "Stylized portrait of Lionel Messi"
+    "alt": "Photograph of Lionel Messi",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q615",
+    "source": "https://commons.wikimedia.org/wiki/File:Leo_Messi_Argentina_v_Egypt_7_July_2026-1.jpg",
+    "sourceFile": "Leo Messi Argentina v Egypt 7 July 2026-1.jpg",
+    "author": "Bryan Berlin",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
   },
   {
     "slug": "barack-obama",
     "name": "Barack Obama",
     "src": "/celebrities/barack-obama.svg",
-    "alt": "Stylized portrait of Barack Obama"
+    "alt": "Photograph of Barack Obama",
+    "provider": "Wikimedia Commons",
+    "wikidata": "Q76",
+    "source": "https://commons.wikimedia.org/wiki/File:President_Barack_Obama.jpg",
+    "sourceFile": "President Barack Obama.jpg",
+    "author": "Official White House Photo by Pete Souza",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:President_Barack_Obama.jpg"
   }
 ]

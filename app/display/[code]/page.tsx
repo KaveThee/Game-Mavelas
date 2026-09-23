@@ -68,6 +68,7 @@ const gameName: Record<string, string> = {
   "trivia-scitech": "Trivia Vault · Brain Buzz",
   "trivia-mix": "Trivia Vault · Anything Goes",
   guess_image: "Clue Heist",
+  logo_quiz: "Logo Rush",
 };
 
 function getFlagDifficulty(position?: number, totalRounds = 15): "Easy" | "Medium" | "Hard" | null {
@@ -199,6 +200,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const allAnswersIn = room?.phase === "all_answered" && !isRevealed;
   const isWhoAmI = round?.game_mode === "who_am_i";
   const isClueHeist = round?.game_mode === "guess_image";
+  const isLogoQuiz = round?.game_mode === "logo_quiz";
   const flagDifficulty =
     round?.game_mode === "flag_frenzy" ? getFlagDifficulty(round.position, round.total_rounds) : null;
 
@@ -366,6 +368,22 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                     unoptimized
                     className="h-56 w-auto max-w-full rounded-3xl border-4 border-white/10 bg-white object-contain p-4 shadow-2xl sm:h-64"
                   />
+                </div>
+              )}
+
+              {/* Logo Rush keeps a generous white clear-space around each mark. */}
+              {isLogoQuiz && round?.media?.type === "logo" && (
+                <div className="mt-6 flex max-w-4xl items-center justify-start">
+                  <div className="grid h-48 w-full max-w-2xl place-items-center rounded-[2rem] border-4 border-white/10 bg-white p-8 shadow-2xl sm:h-56 lg:h-64">
+                    <Image
+                      src={round.media.url}
+                      alt={round.media.alt}
+                      width={960}
+                      height={480}
+                      unoptimized
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
                 </div>
               )}
 
