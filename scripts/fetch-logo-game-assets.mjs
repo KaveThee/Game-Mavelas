@@ -12,7 +12,12 @@ const globalTitles = [
   "Uber", "Ebay", "IBM", "PlayStation", "Xbox", "Slack", "Snapchat", "Pinterest", "GitHub",
   "TikTok", "Zoom", "Android", "Meta", "Notion", "Dropbox", "Stripe", "Google Maps",
   "Google Play", "App Store", "Prime video", "Twitch", "Binance", "X (formerly Twitter)",
-  "Google Drive", "Microsoft Teams"
+  "Google Drive", "Microsoft Teams", "Gmail", "Google Calendar", "Google Sheets", "Google Slides",
+  "Google Meet", "Microsoft Excel", "Microsoft Word", "Microsoft PowerPoint", "Microsoft Outlook",
+  "Microsoft OneDrive", "Apple Music", "Youtube Music", "Messenger", "Threads", "Bluesky",
+  "Roblox", "Steam", "SoundCloud", "Hulu", "Opera", "Brave Browser", "Edge", "Acrobat Reader",
+  "Figma", "OpenAI", "Coursera", "Udemy", "GitLab", "Docker", "WordPress", "Salesforce",
+  "Coinbase", "Trello", "Asana", "Google Classroom", "Google Chat"
 ];
 
 const regionalBrands = [

@@ -4,11 +4,50 @@ const celebrityManifest = JSON.parse(await readFile("public/celebrities/manifest
 const logoManifest = JSON.parse(await readFile("public/logos/manifest.json", "utf8"));
 const sql = (value = "") => `'${String(value).replaceAll("'", "''")}'`;
 const sqlSlug = (value) => value.replaceAll("-", "_");
+const authenticCelebrities = celebrityManifest.filter((person) => person.provider === "Wikimedia Commons");
+const fallbackCelebrities = celebrityManifest.filter((person) => person.provider !== "Wikimedia Commons");
 
-const celebrityRows = celebrityManifest
-  .filter((person) => person.provider === "Wikimedia Commons")
-  .map((person) => `  (${sql(person.slug)}, ${sql(person.alt)}, ${sql(`${person.author} · Wikimedia Commons`)}, ${sql(`${person.license} · ${person.source}`)})`)
+const legacyRegions = new Map([
+  ["lupita-nyongo", "Kenya"], ["eliud-kipchoge", "Kenya"], ["faith-kipyegon", "Kenya"],
+  ["wangari-maathai", "Kenya"], ["ferdinand-omanyala", "Kenya"], ["david-rudisha", "Kenya"],
+  ["mwai-kibaki", "Kenya"], ["dedan-kimathi", "Kenya"], ["joy-adamson", "Kenya"],
+  ["william-ruto", "Kenya"], ["raila-odinga", "Kenya"], ["uhuru-kenyatta", "Kenya"],
+  ["nyashinski", "Kenya"], ["victor-wanyama", "Kenya"], ["catherine-kamau", "Kenya"],
+  ["nelson-mandela", "Africa"], ["trevor-noah", "Africa"], ["burna-boy", "Africa"],
+  ["diamond-platnumz", "Africa"], ["mohamed-salah", "Africa"], ["didier-drogba", "Africa"],
+  ["davido", "Africa"], ["cristiano-ronaldo", "Global"], ["lionel-messi", "Global"],
+  ["barack-obama", "Global"],
+]);
+
+const legacyFields = new Map([
+  ["lupita-nyongo", "film"], ["eliud-kipchoge", "athletics"], ["faith-kipyegon", "athletics"],
+  ["wangari-maathai", "leadership"], ["ferdinand-omanyala", "athletics"], ["david-rudisha", "athletics"],
+  ["mwai-kibaki", "leadership"], ["dedan-kimathi", "leadership"], ["joy-adamson", "conservation"],
+  ["william-ruto", "leadership"], ["raila-odinga", "leadership"], ["uhuru-kenyatta", "leadership"],
+  ["nyashinski", "music"], ["victor-wanyama", "football"], ["catherine-kamau", "film"],
+  ["nelson-mandela", "leadership"], ["trevor-noah", "comedy"], ["burna-boy", "music"],
+  ["diamond-platnumz", "music"], ["mohamed-salah", "football"], ["didier-drogba", "football"],
+  ["davido", "music"], ["cristiano-ronaldo", "football"], ["lionel-messi", "football"],
+  ["barack-obama", "leadership"],
+]);
+
+const celebrityQuestionSlug = (person) => person.slug === "wangari-maathai"
+  ? "wangari_maathai"
+  : `${sqlSlug(person.slug)}_identity`;
+
+const celebrityMediaRows = authenticCelebrities
+  .map((person) => `  (${sql(person.slug)}, ${sql(person.src)}, ${sql(person.alt)}, ${sql(`${person.author} · Wikimedia Commons`)}, ${sql(`${person.license} · ${person.source}`)})`)
   .join(",\n");
+
+const celebrityQuestionRows = authenticCelebrities.map((person) => {
+  const region = person.region ?? legacyRegions.get(person.slug) ?? "Global";
+  const field = person.field ?? legacyFields.get(person.slug) ?? "public life";
+  const difficulty = person.difficulty ?? (region === "Global" ? 1 : 2);
+  const explanation = `${person.name} is a widely recognised ${field} figure associated with ${region}.`;
+  return `  (${sql(celebrityQuestionSlug(person))}, ${sql(person.slug)}, ${sql(person.name)}, ${sql(explanation)}, ${difficulty}, ${sql(region.toLowerCase())}, ${sql(field)})`;
+}).join(",\n");
+
+const fallbackSlugs = fallbackCelebrities.map((person) => sql(person.slug)).join(", ");
 
 const logoRows = logoManifest.map((logo) => {
   const attribution = logo.provider === "SVGL" ? "SVGL cached asset · Brand belongs to its owner" : `${logo.author} · Wikimedia Commons`;
@@ -46,15 +85,66 @@ update public.round_template_steps
 set seconds_per_question = 90
 where template_id = (select id from public.round_templates where code = 'who_am_i_kenya');
 
--- Keep source and licence information aligned with the authentic local SVG portraits.
-update public.media_assets m
-set alt_text = v.alt_text,
-    attribution = v.attribution,
-    licence = v.licence
+-- Build a deep authentic portrait pool. Every image is cached locally, while its
+-- source and licence remain traceable in the database and embedded SVG metadata.
+insert into public.question_sources(source_key,title,source_url,licence,notes,checked_at)
+values('who_am_i_commons','Who Am I authentic portraits','https://commons.wikimedia.org/','Mixed Wikimedia Commons licences','Verified portraits cached as self-contained local SVG files.',now())
+on conflict(source_key) do update set title=excluded.title,source_url=excluded.source_url,licence=excluded.licence,notes=excluded.notes,checked_at=excluded.checked_at;
+
+insert into public.content_packs(code,title,description,region,is_active)
+values('famous_faces','Famous Faces','Recognisable Kenyan, African, and global public figures.','world',true)
+on conflict(code) do update set title=excluded.title,description=excluded.description,region=excluded.region,is_active=true;
+
+insert into public.categories(code,title,icon,sort_order,is_active)
+values('who_am_i_icons','Famous Faces','users',30,true)
+on conflict(code) do update set title=excluded.title,icon=excluded.icon,sort_order=excluded.sort_order,is_active=true;
+
+insert into public.media_assets(asset_type,provider,asset_key,public_url,alt_text,attribution,licence,source_id,width,height)
+select 'image','game_mavelas',v.asset_key,v.public_url,v.alt_text,v.attribution,v.licence,s.id,720,720
 from (values
-${celebrityRows}
-) as v(asset_key, alt_text, attribution, licence)
-where m.provider = 'game_mavelas' and m.asset_key = v.asset_key;
+${celebrityMediaRows}
+) as v(asset_key,public_url,alt_text,attribution,licence)
+join public.question_sources s on s.source_key='who_am_i_commons'
+on conflict(provider,asset_key) do update set public_url=excluded.public_url,alt_text=excluded.alt_text,attribution=excluded.attribution,licence=excluded.licence,source_id=excluded.source_id,width=excluded.width,height=excluded.height;
+
+insert into public.questions(slug,pack_id,category_id,game_mode,prompt,explanation,media_id,difficulty,duration_seconds,base_points,tags,status,source_id,fact_checked_at)
+select v.question_slug,p.id,c.id,'who_am_i','Who Am I?',v.explanation,m.id,v.difficulty,90,200,array['who_am_i',v.region,v.field],'approved',s.id,now()
+from (values
+${celebrityQuestionRows}
+) as v(question_slug,asset_key,identity_name,explanation,difficulty,region,field)
+join public.content_packs p on p.code='famous_faces'
+join public.categories c on c.code='who_am_i_icons'
+join public.media_assets m on m.provider='game_mavelas' and m.asset_key=v.asset_key
+join public.question_sources s on s.source_key='who_am_i_commons'
+on conflict(slug) do update set pack_id=excluded.pack_id,category_id=excluded.category_id,game_mode=excluded.game_mode,prompt=excluded.prompt,explanation=excluded.explanation,media_id=excluded.media_id,difficulty=excluded.difficulty,duration_seconds=excluded.duration_seconds,base_points=excluded.base_points,tags=excluded.tags,status='approved',source_id=excluded.source_id,fact_checked_at=now(),updated_at=now();
+
+update public.question_options qo
+set option_text='__who_regen__'||qo.id::text,is_correct=false
+from public.questions q
+where qo.question_id=q.id and q.slug in (
+${authenticCelebrities.map((person) => `  ${sql(celebrityQuestionSlug(person))}`).join(",\n")}
+);
+
+insert into public.question_options(question_id,position,option_text,is_correct)
+select q.id,1,v.identity_name,true
+from (values
+${celebrityQuestionRows}
+) as v(question_slug,asset_key,identity_name,explanation,difficulty,region,field)
+join public.questions q on q.slug=v.question_slug
+on conflict(question_id,position) do update set option_text=excluded.option_text,is_correct=true;
+
+-- Do not serve hand-drawn fallbacks when no verified portrait exists.
+update public.questions q set status='retired',updated_at=now()
+from public.media_assets m
+where q.media_id=m.id and q.game_mode='who_am_i' and m.provider='game_mavelas'
+  and m.asset_key in (${fallbackSlugs});
+
+delete from public.round_template_steps
+where template_id=(select id from public.round_templates where code='who_am_i_kenya') and position>1;
+
+update public.round_template_steps
+set category_id=(select id from public.categories where code='who_am_i_icons'),difficulty_min=1,difficulty_max=5,question_count=10,seconds_per_question=90
+where template_id=(select id from public.round_templates where code='who_am_i_kenya');
 
 -- Opponents can send short clues; the RPCs keep the hidden identity and table private.
 create table if not exists public.who_am_i_clues (
@@ -195,6 +285,11 @@ join public.categories c on c.code='brand_logos'
 join public.media_assets m on m.provider='game_mavelas_logos' and m.asset_key=v.asset_key
 join public.question_sources s on s.source_key='logo_rush_assets'
 on conflict(slug) do update set pack_id=excluded.pack_id,category_id=excluded.category_id,game_mode=excluded.game_mode,prompt=excluded.prompt,explanation=excluded.explanation,media_id=excluded.media_id,difficulty=excluded.difficulty,duration_seconds=excluded.duration_seconds,base_points=excluded.base_points,tags=excluded.tags,status='approved',source_id=excluded.source_id,fact_checked_at=now(),updated_at=now();
+
+update public.question_options qo
+set option_text='__logo_regen__'||qo.id::text,is_correct=false
+from public.questions q
+where qo.question_id=q.id and q.pack_id=(select id from public.content_packs where code='logo_rush');
 
 insert into public.question_options(question_id,position,option_text,is_correct)
 select q.id,v.position,v.option_text,v.is_correct

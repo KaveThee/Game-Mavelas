@@ -3,7 +3,22 @@ import path from "node:path";
 
 const root = process.cwd();
 const manifestPath = path.join(root, "public/celebrities/manifest.json");
-const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+const currentManifest = JSON.parse(await readFile(manifestPath, "utf8"));
+const catalog = JSON.parse(await readFile(path.join(root, "scripts/who-am-i-catalog.json"), "utf8"));
+const existingSlugs = new Set(currentManifest.map((person) => person.slug));
+const additions = catalog
+  .filter((person) => !existingSlugs.has(person.slug))
+  .map((person) => ({
+    slug: person.slug,
+    name: person.displayName ?? person.name,
+    lookupName: person.name,
+    src: `/celebrities/${person.slug}.svg`,
+    alt: `Photograph of ${person.displayName ?? person.name}`,
+    region: person.region,
+    field: person.field,
+    difficulty: person.difficulty,
+  }));
+const manifest = [...currentManifest, ...additions];
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const clean = (value = "") => value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
@@ -68,7 +83,7 @@ async function resolvePortrait(name) {
     titles: `File:${filename}`,
     prop: "imageinfo",
     iiprop: "url|size|mime|extmetadata",
-    iiurlwidth: "720",
+    iiurlwidth: "512",
     format: "json",
     origin: "*",
   });
@@ -93,7 +108,7 @@ const failures = [];
 async function downloadPerson(person) {
   if (person.provider === "Wikimedia Commons" && person.source) return person;
   try {
-    const portrait = await resolvePortrait(person.name);
+    const portrait = await resolvePortrait(person.lookupName ?? person.name);
     const response = await fetch(portrait.imageUrl, { headers: { "User-Agent": "GameMavelas/1.0 (party quiz asset importer)" } });
     if (!response.ok) throw new Error(`Could not download portrait (${response.status})`);
     const mime = response.headers.get("content-type")?.split(";")[0] || "image/jpeg";
@@ -118,6 +133,7 @@ async function downloadPerson(person) {
     await writeFile(path.join(root, "public/celebrities", `${person.slug}.svg`), svg);
     const record = {
       ...person,
+      lookupName: undefined,
       alt: `Photograph of ${person.name}`,
       provider: "Wikimedia Commons",
       wikidata: portrait.qid,
