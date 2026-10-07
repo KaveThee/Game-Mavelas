@@ -18,6 +18,7 @@ import {
   Monitor,
   Play,
   Plus,
+  Route,
   RotateCcw,
   ScanLine,
   Send,
@@ -26,123 +27,39 @@ import {
   Trophy,
   Trash2,
   Users,
+  type LucideIcon,
 } from "lucide-react";
+import {
+  classicGames as games,
+  findPlayableGame,
+  getGameTitle,
+  playableGames,
+  triviaBranches,
+} from "@/lib/games/registry";
+import { isGameEnabled } from "@/lib/games/feature-flags";
+import type { GameIconKey, GameDefinition } from "@/lib/games/types";
 import { ensureGameIdentity, supabase } from "@/lib/supabase";
 
-const triviaBranches = [
-  {
-    id: "trivia-kenya",
-    title: "Home Turf",
-    kicker: "Kenya & East Africa",
-    icon: Sparkles,
-    color: "pink",
-    template: "trivia_vault_kenya",
-    description: "A three-round Kenya and East Africa challenge, from warm-up facts to proper local knowledge.",
-    meta: "15 questions · 100 → 200 points · Kenya focus",
-    instructions: "Choose an answer on your phone before the timer ends. Each round gets tougher and earns more points.",
-    isSupported: true,
-  },
-  {
-    id: "trivia-scitech",
-    title: "Brain Buzz",
-    kicker: "Science & Technology",
-    icon: Sparkles,
-    color: "pink",
-    template: "trivia_vault_scitech",
-    description: "Test the table on science and technology through three escalating rounds.",
-    meta: "15 questions · 100 → 200 points · Science + tech",
-    instructions: "Start with a warm-up, then progress into technology and the final hard round.",
-    isSupported: true,
-  },
-  {
-    id: "trivia-mix",
-    title: "Anything Goes",
-    kicker: "Mixed knowledge",
-    icon: Sparkles,
-    color: "pink",
-    template: "trivia_vault_mix",
-    description: "A broad general-knowledge run for mixed groups, with a clear Easy, Medium and Hard finish.",
-    meta: "15 questions · 100 → 200 points · Mixed topics",
-    instructions: "Every correct tap scores. The final round is worth the most, so no lead is safe.",
-    isSupported: true,
-  },
-];
+const gameIcons: Partial<Record<GameIconKey, LucideIcon>> = {
+  sparkles: Sparkles,
+  map: MapPinned,
+  image: ImageIcon,
+  shapes: Shapes,
+  scan: ScanLine,
+  route: Route,
+};
 
-const games = [
-  {
-    id: "trivia",
-    title: "Trivia Vault",
-    kicker: "Pick your branch",
-    icon: Sparkles,
-    color: "pink",
-    description: "Choose a themed quiz branch: Home Turf, Brain Buzz, or Anything Goes.",
-    meta: "3 branches · 15 questions · 100 → 200 points",
-    template: "",
-    instructions: "Pick a Trivia Vault branch before starting.",
-    isSupported: true,
-  },
-  {
-    id: "flags",
-    title: "Flag Frenzy",
-    kicker: "Fastest finger wins",
-    icon: MapPinned,
-    color: "yellow",
-    template: "flag_frenzy_africa",
-    description: "Spot the country from its flag before the countdown runs down.",
-    meta: "15, 30, 45 or 60 flags · 30 seconds each",
-    instructions: "A flag will display on the screen. Tap the matching country name as fast as you can to score points!",
-    isSupported: true,
-  },
-  {
-    id: "who",
-    title: "Who Am I?",
-    kicker: "Talk, clue, guess",
-    icon: ImageIcon,
-    color: "lime",
-    template: "who_am_i_kenya",
-    description: "One player at a time discovers a famous face through yes-or-no questions from the table.",
-    meta: "90 seconds · Private question clipboard · Live table clues",
-    instructions: "The guesser has 90 seconds and a private clipboard. Everyone else sees the identity and can send short clues before the final guess.",
-    isSupported: true,
-  },
-  {
-    id: "logos",
-    title: "Logo Rush",
-    kicker: "Name that brand",
-    icon: Shapes,
-    color: "yellow",
-    template: "logo_rush_world",
-    description: "Recognise familiar international, African and Kenyan brands from their logos.",
-    meta: "67-logo library · 20 shuffled rounds · Global + local",
-    instructions: "Study the logo on the shared screen, then tap the matching A, B, C or D answer on your phone.",
-    isSupported: true,
-  },
-  {
-    id: "image",
-    title: "Clue Heist",
-    kicker: "Guess early or steal",
-    icon: ScanLine,
-    color: "blue",
-    template: "clue_heist_classic",
-    description: "Solve a hidden image from up to 20 clues. Every extra clue lowers its value, and missed answers open the heist.",
-    meta: "20 clues · 100→5 points · Live steals",
-    instructions: "The spotlight player guesses first. A wrong answer opens the steal to everyone else for half the available points.",
-    isSupported: true,
-  },
+const enabledExpansionGames = playableGames.filter(
+  (game) => game.collection !== "mavelas-classics" && isGameEnabled(game),
+);
+const homeGames = [...games, ...enabledExpansionGames];
+const lobbyStandaloneGames = [
+  ...games.filter((game) => game.id !== "trivia"),
+  ...enabledExpansionGames,
 ];
-
-const playableGames = [...triviaBranches, ...games.filter((game) => game.id !== "trivia")];
 
 const flagRoundOptions = [15, 30, 45, 60] as const;
 type FlagRoundCount = (typeof flagRoundOptions)[number];
-
-const modeNames: Record<string, string> = {
-  trivia: "Trivia Vault",
-  flag_frenzy: "Flag Frenzy",
-  who_am_i: "Who Am I?",
-  logo_quiz: "Logo Rush",
-  guess_image: "Clue Heist",
-};
 
 function getFlagDifficulty(position?: number, totalRounds = 15): "Easy" | "Medium" | "Hard" | null {
   if (!position) return null;
@@ -176,6 +93,7 @@ type CurrentQuestion = {
 
 type MyAnswer = {
   has_answered: boolean;
+  timed_out?: boolean;
   selected_option_id?: string | null;
   is_revealed: boolean;
   is_correct?: boolean | null;
@@ -185,8 +103,10 @@ type MyAnswer = {
 };
 
 type LeaderboardEntry = {
+  id?: string;
   name: string;
   score: number;
+  position?: number;
   is_me: boolean;
   is_host: boolean;
 };
@@ -223,6 +143,11 @@ type ServerGameState = {
   selected_game: string;
   state_version: number;
   my_score: number;
+  my_position?: number;
+  my_streak?: number;
+  board_length?: number;
+  current_round?: number;
+  total_rounds?: number;
   total_players: number;
   answered_count: number;
   slowest_player_name?: string | null;
@@ -262,7 +187,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
 
   const room = useMemo(() => serverState?.room_code || roomCode || "MAV1", [serverState?.room_code, roomCode]);
-  const chosenGame = playableGames.find((g) => g.id === selectedGame) ?? playableGames[0];
+  const chosenGame = findPlayableGame(selectedGame) ?? playableGames[0];
   const livePhase = serverState?.phase;
   const liveRoundId = serverState?.current_question?.round_id;
   const liveRoundClosesAt = serverState?.current_question?.closes_at;
@@ -288,7 +213,15 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
       }
 
       if (data) {
-        const state = data as ServerGameState;
+        let state = data as ServerGameState;
+        if (state.selected_game === "trivia_dash") {
+          const { data: dashData, error: dashError } = await supabase.rpc(
+            "get_trivia_dash_player_state",
+            { p_room_id: id },
+          );
+          if (dashError) throw dashError;
+          state = dashData as ServerGameState;
+        }
         if (state.phase === "all_answered") {
           const { data: publicState } = await supabase.rpc("get_public_room_state", {
             p_room_code: state.room_code,
@@ -314,7 +247,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
         // Sync selected game if in lobby
         if (state.status === "lobby") {
-          const matched = playableGames.find((g) => g.id === state.selected_game || g.template === state.selected_game);
+          const matched = findPlayableGame(state.selected_game);
           if (matched) setSelectedGame(matched.id);
           setScreen("lobby");
         } else if (state.status === "playing") {
@@ -437,13 +370,16 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     const client = supabase;
 
     const timer = window.setTimeout(() => {
+      const revealRpc = serverState?.selected_game === "trivia_dash"
+        ? "reveal_trivia_dash_round"
+        : "auto_reveal_round";
       void client
-        .rpc("auto_reveal_round", { p_room_id: liveRoomId })
+        .rpc(revealRpc, { p_room_id: liveRoomId })
         .then(() => refreshGameState());
     }, allInReady ? 3100 : 250);
 
     return () => window.clearTimeout(timer);
-  }, [livePhase, liveRoundId, liveRoomId, refreshGameState, secondsRemaining]);
+  }, [livePhase, liveRoundId, liveRoomId, refreshGameState, secondsRemaining, serverState?.selected_game]);
 
   // Reveals stay on screen long enough to celebrate, then the server advances.
   useEffect(() => {
@@ -451,13 +387,16 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     const client = supabase;
 
     const timer = window.setTimeout(() => {
+      const advanceRpc = serverState?.selected_game === "trivia_dash"
+        ? "advance_trivia_dash_round"
+        : "auto_advance_round";
       void client
-        .rpc("auto_advance_round", { p_room_id: liveRoomId })
+        .rpc(advanceRpc, { p_room_id: liveRoomId })
         .then(() => refreshGameState());
     }, 6200);
 
     return () => window.clearTimeout(timer);
-  }, [livePhase, liveRoundId, liveRoomId, refreshGameState]);
+  }, [livePhase, liveRoundId, liveRoomId, refreshGameState, serverState?.selected_game]);
 
   // Synchronized countdown timer for player controller
   useEffect(() => {
@@ -485,10 +424,12 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     try {
       await ensureGameIdentity();
       if (!supabase) throw new Error("Live game service not configured.");
-      const { data: created, error: roomError } = await supabase.rpc("create_game_room", {
-        p_nickname: name.trim(),
-        p_selected_game: selectedGame,
-      });
+      const { data: created, error: roomError } = selectedGame === "trivia-dash"
+        ? await supabase.rpc("create_trivia_dash_room", { p_nickname: name.trim() })
+        : await supabase.rpc("create_game_room", {
+            p_nickname: name.trim(),
+            p_selected_game: selectedGame,
+          });
       if (roomError || !created) throw roomError ?? new Error("Could not create the room.");
 
       const room = created as { id: string; code: string };
@@ -567,10 +508,12 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   async function handleSelectGame(gameId: string) {
     if (!isHost || !liveRoomId || !supabase) return;
     setConnectionError("");
-    const { error } = await supabase.rpc("select_room_game", {
-      p_room_id: liveRoomId,
-      p_selected_game: gameId,
-    });
+    const { error } = gameId === "trivia-dash"
+      ? await supabase.rpc("select_trivia_dash_room", { p_room_id: liveRoomId })
+      : await supabase.rpc("select_room_game", {
+          p_room_id: liveRoomId,
+          p_selected_game: gameId,
+        });
     if (error) {
       setConnectionError(error.message);
       return;
@@ -581,7 +524,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
   async function handleStartGame() {
     const game = playableGames.find((g) => g.id === selectedGame);
-    if (!game || !game.template) {
+    if (!game || !game.template || !isGameEnabled(game)) {
       setConnectionError("Choose a playable game or Trivia Vault branch first.");
       return;
     }
@@ -590,11 +533,13 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setConnectionError("");
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.rpc("start_game", {
-        p_room_id: liveRoomId,
-        p_template_code: game.template,
-        ...(game.id === "flags" ? { p_round_count: flagRoundCount } : {}),
-      });
+      const { error } = game.id === "trivia-dash"
+        ? await supabase.rpc("start_trivia_dash", { p_room_id: liveRoomId })
+        : await supabase.rpc("start_game", {
+            p_room_id: liveRoomId,
+            p_template_code: game.template,
+            ...(game.id === "flags" ? { p_round_count: flagRoundCount } : {}),
+          });
       if (error) throw error;
       await refreshGameState();
       setScreen("game");
@@ -702,7 +647,10 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setConnectionError("");
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.rpc("host_replay_game", { p_room_id: liveRoomId });
+      const replayRpc = serverState?.selected_game === "trivia_dash"
+        ? "host_replay_trivia_dash"
+        : "host_replay_game";
+      const { error } = await supabase.rpc(replayRpc, { p_room_id: liveRoomId });
       if (error) throw error;
       await refreshGameState();
       setScreen("game");
@@ -718,7 +666,10 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setConnectionError("");
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.rpc("host_return_to_lobby", { p_room_id: liveRoomId });
+      const returnRpc = serverState?.selected_game === "trivia_dash"
+        ? "host_return_trivia_dash_to_lobby"
+        : "host_return_to_lobby";
+      const { error } = await supabase.rpc(returnRpc, { p_room_id: liveRoomId });
       if (error) throw error;
       await refreshGameState();
       setScreen("lobby");
@@ -770,6 +721,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     return (
       <ResultsScreen
         room={room}
+        gameMode={serverState.selected_game}
         isHost={isHost}
         leaderboard={serverState.leaderboard}
         isSubmitting={isSubmitting}
@@ -957,16 +909,16 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
             <span className="text-sm text-[#d7ff3f] font-bold">Phase 3 Live</span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {games.map((game) => {
-              const Icon = game.icon;
+            {homeGames.map((game) => {
+              const Icon = gameIcons[game.icon] ?? Gamepad2;
               return (
                 <article
-                  className={`game-card ${game.color} ${!game.isSupported ? "opacity-65" : ""}`}
+                  className={`game-card ${game.color} ${!isGameEnabled(game) ? "opacity-65" : ""}`}
                   key={game.id}
                 >
                   <div className="flex items-center justify-between">
                     <Icon size={26} strokeWidth={2.6} />
-                    {game.isSupported && (
+                    {isGameEnabled(game) && (
                       <span className="rounded-full bg-black/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider">
                         Playable
                       </span>
@@ -1025,7 +977,7 @@ function Lobby({
   hostName: string;
   selectedGame: string;
   setSelectedGame: (id: string) => void;
-  chosenGame: typeof playableGames[number];
+  chosenGame: GameDefinition;
   flagRoundCount: FlagRoundCount;
   setFlagRoundCount: (count: FlagRoundCount) => void;
   isHost: boolean;
@@ -1145,8 +1097,8 @@ function Lobby({
                       ))}
                     </div>
                   </div>
-                  {games.filter((game) => game.id !== "trivia").map((game) => {
-                    const Icon = game.icon;
+                  {lobbyStandaloneGames.map((game) => {
+                    const Icon = gameIcons[game.icon] ?? Gamepad2;
                     return (
                       <button
                         type="button"
@@ -1201,7 +1153,7 @@ function Lobby({
 
                   <button
                     className="button-lime mt-5 w-full flex items-center justify-center gap-2"
-                    disabled={isPlaying || !chosenGame.isSupported}
+                    disabled={isPlaying || !isGameEnabled(chosenGame)}
                     onClick={onStart}
                   >
                     <Play size={16} fill="currentColor" />
@@ -1275,6 +1227,7 @@ function GameScreen({
   const hasAnswered = myAnswer.has_answered;
   const isWhoAmI = question?.game_mode === "who_am_i";
   const isClueHeist = question?.game_mode === "guess_image";
+  const isTriviaDash = question?.game_mode === "trivia_dash";
   const heist = state.clue_heist;
   const [guess, setGuess] = useState("");
   const [clueDraft, setClueDraft] = useState("");
@@ -1307,7 +1260,7 @@ function GameScreen({
     setClipboardDraft("");
   }
 
-  const modeLabel = modeNames[question?.game_mode || ""] || "Game Mavelas";
+  const modeLabel = getGameTitle(question?.game_mode);
   const flagDifficulty =
     question?.game_mode === "flag_frenzy" ? getFlagDifficulty(question.position, question.total_rounds) : null;
 
@@ -1332,7 +1285,12 @@ function GameScreen({
             <span className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">
               {modeLabel}{flagDifficulty ? ` · ${flagDifficulty}` : ""} · Round {question?.position} of {question?.total_rounds || 10}
             </span>
-            <p className="text-sm text-white/50">Score: <strong className="text-white font-mono">{state.my_score} pts</strong></p>
+            <p className="text-sm text-white/50">
+              {isTriviaDash ? "Race: " : "Score: "}
+              <strong className="text-white font-mono">
+                {isTriviaDash ? `${state.my_position ?? 0}/${state.board_length ?? 24} spaces` : `${state.my_score} pts`}
+              </strong>
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -1363,6 +1321,22 @@ function GameScreen({
                 {isRevealed ? "Round complete." : isClueHeist ? heist?.turn_phase === "steal" ? "The heist is open!" : heist?.is_spotlight ? "You are in the spotlight." : `${question?.active_player_name || "A player"} has priority.` : isWhoAmI ? question?.is_active_player ? "You are the guesser." : `${question?.active_player_name || "A player"} is the guesser.` : "Look at the shared screen."}
               </h1>
               {!isRevealed && !isWhoAmI && !isClueHeist && <p className="mt-2 text-sm font-bold text-black/55">Tap the letter that matches the answer on TV.</p>}
+
+              {isTriviaDash && (
+                <div className="mt-6 rounded-2xl bg-black/[.06] p-4">
+                  <div className="flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[.12em] text-black/55">
+                    <span>Board position {state.my_position ?? 0} / {state.board_length ?? 24}</span>
+                    <span>Streak {state.my_streak ?? 0}</span>
+                  </div>
+                  <div className="mt-3 h-4 overflow-hidden rounded-full border-2 border-[#101314] bg-white">
+                    <div
+                      className="h-full bg-[#d7ff3f] transition-[width] duration-700"
+                      style={{ width: `${Math.min(100, ((state.my_position ?? 0) / (state.board_length ?? 24)) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs font-bold text-black/55">Correct: +2 spaces · Every third correct in a row: +1 bonus</p>
+                </div>
+              )}
 
               {isClueHeist && !isRevealed && (
                 <div className="mt-6 space-y-4">
@@ -1540,6 +1514,8 @@ function GameScreen({
                     <p className="text-lg font-black">
                       {myAnswer.is_correct
                         ? `Correct! +${myAnswer.points_awarded || 100} pts`
+                        : myAnswer.timed_out
+                        ? "Did not answer in time"
                         : hasAnswered
                         ? "Not this one!"
                         : "Did not answer in time"}
@@ -1578,6 +1554,7 @@ function GameScreen({
 // RESULTS SCREEN
 function ResultsScreen({
   room,
+  gameMode,
   isHost,
   leaderboard,
   isSubmitting,
@@ -1587,6 +1564,7 @@ function ResultsScreen({
   onHome,
 }: {
   room: string;
+  gameMode: string;
   isHost: boolean;
   leaderboard: LeaderboardEntry[];
   isSubmitting: boolean;
@@ -1625,7 +1603,11 @@ function ResultsScreen({
                   {entry.is_me && <span className="text-[10px] uppercase font-bold text-black/60">(You)</span>}
                   {entry.is_host && <span className="text-[10px] uppercase font-bold bg-black/10 px-1.5 py-0.5 rounded">Host</span>}
                 </div>
-                <span className="font-mono font-black">{entry.score} pts</span>
+                <span className="font-mono font-black">
+                  {gameMode === "trivia_dash" && entry.position !== undefined
+                    ? `${entry.position}/24 spaces · ${entry.score} pts`
+                    : `${entry.score} pts`}
+                </span>
               </div>
             ))}
           </div>
