@@ -1,0 +1,965 @@
+[
+  {
+    "slug": "google",
+    "name": "Google",
+    "src": "/logos/google.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.google.com/",
+    "assetSource": "https://svgl.app/library/google.svg"
+  },
+  {
+    "slug": "discord",
+    "name": "Discord",
+    "src": "/logos/discord.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://discord.com/",
+    "assetSource": "https://svgl.app/library/discord.svg"
+  },
+  {
+    "slug": "cisco",
+    "name": "Cisco",
+    "src": "/logos/cisco.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.cisco.com/",
+    "assetSource": "https://svgl.app/library/cisco_light.svg"
+  },
+  {
+    "slug": "paypal",
+    "name": "PayPal",
+    "src": "/logos/paypal.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://paypal.com",
+    "assetSource": "https://svgl.app/library/paypal.svg"
+  },
+  {
+    "slug": "youtube",
+    "name": "YouTube",
+    "src": "/logos/youtube.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.youtube.com",
+    "assetSource": "https://svgl.app/library/youtube.svg"
+  },
+  {
+    "slug": "netflix",
+    "name": "Netflix",
+    "src": "/logos/netflix.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.netflix.com",
+    "assetSource": "https://svgl.app/library/netflix-icon.svg"
+  },
+  {
+    "slug": "spotify",
+    "name": "Spotify",
+    "src": "/logos/spotify.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.spotify.com/",
+    "assetSource": "https://svgl.app/library/spotify.svg"
+  },
+  {
+    "slug": "nvidia",
+    "name": "NVIDIA",
+    "src": "/logos/nvidia.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.nvidia.com",
+    "assetSource": "https://svgl.app/library/nvidia-icon-light.svg"
+  },
+  {
+    "slug": "linkedin",
+    "name": "LinkedIn",
+    "src": "/logos/linkedin.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.linkedin.com/",
+    "assetSource": "https://svgl.app/library/linkedin.svg"
+  },
+  {
+    "slug": "facebook",
+    "name": "Facebook",
+    "src": "/logos/facebook.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.facebook.com",
+    "assetSource": "https://svgl.app/library/facebook-icon.svg"
+  },
+  {
+    "slug": "whatsapp",
+    "name": "WhatsApp",
+    "src": "/logos/whatsapp.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://web.whatsapp.com",
+    "assetSource": "https://svgl.app/library/whatsapp-icon.svg"
+  },
+  {
+    "slug": "amazon-web-services",
+    "name": "Amazon Web Services",
+    "src": "/logos/amazon-web-services.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://aws.amazon.com/",
+    "assetSource": "https://svgl.app/library/aws_light.svg"
+  },
+  {
+    "slug": "microsoft",
+    "name": "Microsoft",
+    "src": "/logos/microsoft.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.microsoft.com/",
+    "assetSource": "https://svgl.app/library/microsoft.svg"
+  },
+  {
+    "slug": "microsoft-azure",
+    "name": "Microsoft Azure",
+    "src": "/logos/microsoft-azure.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://azure.microsoft.com/",
+    "assetSource": "https://svgl.app/library/azure.svg"
+  },
+  {
+    "slug": "telegram",
+    "name": "Telegram",
+    "src": "/logos/telegram.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://web.telegram.org/",
+    "assetSource": "https://svgl.app/library/telegram.svg"
+  },
+  {
+    "slug": "windows",
+    "name": "Windows",
+    "src": "/logos/windows.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.microsoft.com/windows",
+    "assetSource": "https://svgl.app/library/windows.svg"
+  },
+  {
+    "slug": "chrome",
+    "name": "Chrome",
+    "src": "/logos/chrome.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://chrome.com/",
+    "assetSource": "https://svgl.app/library/chrome.svg"
+  },
+  {
+    "slug": "cloudflare",
+    "name": "Cloudflare",
+    "src": "/logos/cloudflare.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.cloudflare.com/",
+    "assetSource": "https://svgl.app/library/cloudflare.svg"
+  },
+  {
+    "slug": "apple",
+    "name": "Apple",
+    "src": "/logos/apple.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.apple.com",
+    "assetSource": "https://svgl.app/library/apple.svg"
+  },
+  {
+    "slug": "disney",
+    "name": "Disney+",
+    "src": "/logos/disney.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.disneyplus.com/",
+    "assetSource": "https://svgl.app/library/disneyplus.svg"
+  },
+  {
+    "slug": "reddit",
+    "name": "Reddit",
+    "src": "/logos/reddit.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.reddit.com/",
+    "assetSource": "https://svgl.app/library/reddit.svg"
+  },
+  {
+    "slug": "canva",
+    "name": "Canva",
+    "src": "/logos/canva.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.canva.com/",
+    "assetSource": "https://svgl.app/library/canva.svg"
+  },
+  {
+    "slug": "airbnb",
+    "name": "Airbnb",
+    "src": "/logos/airbnb.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.airbnb.com",
+    "assetSource": "https://svgl.app/library/airbnb.svg"
+  },
+  {
+    "slug": "safari",
+    "name": "Safari",
+    "src": "/logos/safari.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.apple.com/safari",
+    "assetSource": "https://svgl.app/library/safari.svg"
+  },
+  {
+    "slug": "shopify",
+    "name": "Shopify",
+    "src": "/logos/shopify.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.shopify.com",
+    "assetSource": "https://svgl.app/library/shopify.svg"
+  },
+  {
+    "slug": "firefox",
+    "name": "Firefox",
+    "src": "/logos/firefox.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.mozilla.org/en-US/firefox/",
+    "assetSource": "https://svgl.app/library/firefox.svg"
+  },
+  {
+    "slug": "instagram",
+    "name": "Instagram",
+    "src": "/logos/instagram.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.instagram.com/",
+    "assetSource": "https://svgl.app/library/instagram-icon.svg"
+  },
+  {
+    "slug": "bitcoin",
+    "name": "Bitcoin",
+    "src": "/logos/bitcoin.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://bitcoin.org/",
+    "assetSource": "https://svgl.app/library/btc.svg"
+  },
+  {
+    "slug": "adobe",
+    "name": "Adobe",
+    "src": "/logos/adobe.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.adobe.com/",
+    "assetSource": "https://svgl.app/library/adobe.svg"
+  },
+  {
+    "slug": "ethereum",
+    "name": "Ethereum",
+    "src": "/logos/ethereum.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://ethereum.org/",
+    "assetSource": "https://svgl.app/library/eth.svg"
+  },
+  {
+    "slug": "uber",
+    "name": "Uber",
+    "src": "/logos/uber.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.uber.com",
+    "assetSource": "https://svgl.app/library/uber_light.svg"
+  },
+  {
+    "slug": "github",
+    "name": "GitHub",
+    "src": "/logos/github.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://github.com/",
+    "assetSource": "https://svgl.app/library/github_light.svg"
+  },
+  {
+    "slug": "ebay",
+    "name": "Ebay",
+    "src": "/logos/ebay.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.ebay.com",
+    "assetSource": "https://svgl.app/library/ebay.svg"
+  },
+  {
+    "slug": "pinterest",
+    "name": "Pinterest",
+    "src": "/logos/pinterest.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://pinterest.com/",
+    "assetSource": "https://svgl.app/library/pinterest.svg"
+  },
+  {
+    "slug": "snapchat",
+    "name": "Snapchat",
+    "src": "/logos/snapchat.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.snapchat.com",
+    "assetSource": "https://svgl.app/library/snapchat.svg"
+  },
+  {
+    "slug": "tiktok",
+    "name": "TikTok",
+    "src": "/logos/tiktok.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.tiktok.com",
+    "assetSource": "https://svgl.app/library/tiktok-icon-light.svg"
+  },
+  {
+    "slug": "ibm",
+    "name": "IBM",
+    "src": "/logos/ibm.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.ibm.com",
+    "assetSource": "https://svgl.app/library/ibm.svg"
+  },
+  {
+    "slug": "playstation",
+    "name": "PlayStation",
+    "src": "/logos/playstation.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.playstation.com/",
+    "assetSource": "https://svgl.app/library/playstation.svg"
+  },
+  {
+    "slug": "slack",
+    "name": "Slack",
+    "src": "/logos/slack.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.slack.com",
+    "assetSource": "https://svgl.app/library/slack.svg"
+  },
+  {
+    "slug": "xbox",
+    "name": "Xbox",
+    "src": "/logos/xbox.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.xbox.com/",
+    "assetSource": "https://svgl.app/library/xbox.svg"
+  },
+  {
+    "slug": "meta",
+    "name": "Meta",
+    "src": "/logos/meta.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://about.meta.com/es/",
+    "assetSource": "https://svgl.app/library/meta.svg"
+  },
+  {
+    "slug": "prime-video",
+    "name": "Prime video",
+    "src": "/logos/prime-video.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://primevideo.com/",
+    "assetSource": "https://svgl.app/library/prime-video.svg"
+  },
+  {
+    "slug": "google-play",
+    "name": "Google Play",
+    "src": "/logos/google-play.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://play.google.com",
+    "assetSource": "https://svgl.app/library/googleplay.svg"
+  },
+  {
+    "slug": "app-store",
+    "name": "App Store",
+    "src": "/logos/app-store.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.apple.com/app-store/",
+    "assetSource": "https://svgl.app/library/appstore.svg"
+  },
+  {
+    "slug": "zoom",
+    "name": "Zoom",
+    "src": "/logos/zoom.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://zoom.us/",
+    "assetSource": "https://svgl.app/library/zoom.svg"
+  },
+  {
+    "slug": "google-maps",
+    "name": "Google Maps",
+    "src": "/logos/google-maps.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.google.com/maps/",
+    "assetSource": "https://svgl.app/library/googleMaps.svg"
+  },
+  {
+    "slug": "android",
+    "name": "Android",
+    "src": "/logos/android.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.android.com/",
+    "assetSource": "https://svgl.app/library/android-icon.svg"
+  },
+  {
+    "slug": "stripe",
+    "name": "Stripe",
+    "src": "/logos/stripe.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://stripe.com/",
+    "assetSource": "https://svgl.app/library/stripe.svg"
+  },
+  {
+    "slug": "notion",
+    "name": "Notion",
+    "src": "/logos/notion.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://notion.so/",
+    "assetSource": "https://svgl.app/library/notion.svg"
+  },
+  {
+    "slug": "dropbox",
+    "name": "Dropbox",
+    "src": "/logos/dropbox.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.dropbox.com/",
+    "assetSource": "https://svgl.app/library/dropbox.svg"
+  },
+  {
+    "slug": "twitch",
+    "name": "Twitch",
+    "src": "/logos/twitch.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://twitch.tv",
+    "assetSource": "https://svgl.app/library/twitch.svg"
+  },
+  {
+    "slug": "google-meet",
+    "name": "Google Meet",
+    "src": "/logos/google-meet.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://meet.google.com/",
+    "assetSource": "https://svgl.app/library/google-meet.svg"
+  },
+  {
+    "slug": "google-sheets",
+    "name": "Google Sheets",
+    "src": "/logos/google-sheets.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://sheets.google.com/",
+    "assetSource": "https://svgl.app/library/google-sheets.svg"
+  },
+  {
+    "slug": "google-slides",
+    "name": "Google Slides",
+    "src": "/logos/google-slides.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://slides.google.com/",
+    "assetSource": "https://svgl.app/library/google-slides.svg"
+  },
+  {
+    "slug": "x",
+    "name": "X",
+    "src": "/logos/x.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://x.com",
+    "assetSource": "https://svgl.app/library/x.svg"
+  },
+  {
+    "slug": "binance",
+    "name": "Binance",
+    "src": "/logos/binance.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://binance.com/",
+    "assetSource": "https://svgl.app/library/binance.svg"
+  },
+  {
+    "slug": "google-calendar",
+    "name": "Google Calendar",
+    "src": "/logos/google-calendar.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://calendar.google.com/",
+    "assetSource": "https://svgl.app/library/google-calendar.svg"
+  },
+  {
+    "slug": "gmail",
+    "name": "Gmail",
+    "src": "/logos/gmail.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.gmail.com",
+    "assetSource": "https://svgl.app/library/gmail.svg"
+  },
+  {
+    "slug": "microsoft-teams",
+    "name": "Microsoft Teams",
+    "src": "/logos/microsoft-teams.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.microsoft.com/microsoft-teams/group-chat-software",
+    "assetSource": "https://svgl.app/library/microsoft-teams.svg"
+  },
+  {
+    "slug": "google-drive",
+    "name": "Google Drive",
+    "src": "/logos/google-drive.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.google.com/drive/",
+    "assetSource": "https://svgl.app/library/drive.svg"
+  },
+  {
+    "slug": "microsoft-excel",
+    "name": "Microsoft Excel",
+    "src": "/logos/microsoft-excel.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.microsoft.com/microsoft-365/excel",
+    "assetSource": "https://svgl.app/library/microsoft-excel.svg"
+  },
+  {
+    "slug": "messenger",
+    "name": "Messenger",
+    "src": "/logos/messenger.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.messenger.com/",
+    "assetSource": "https://svgl.app/library/messenger.svg"
+  },
+  {
+    "slug": "microsoft-powerpoint",
+    "name": "Microsoft PowerPoint",
+    "src": "/logos/microsoft-powerpoint.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.microsoft.com/microsoft-365/powerpoint",
+    "assetSource": "https://svgl.app/library/microsoft-powerpoint.svg"
+  },
+  {
+    "slug": "threads",
+    "name": "Threads",
+    "src": "/logos/threads.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://threads.net/",
+    "assetSource": "https://svgl.app/library/threads.svg"
+  },
+  {
+    "slug": "microsoft-word",
+    "name": "Microsoft Word",
+    "src": "/logos/microsoft-word.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.microsoft.com/microsoft-365/word",
+    "assetSource": "https://svgl.app/library/microsoft-word.svg"
+  },
+  {
+    "slug": "apple-music",
+    "name": "Apple Music",
+    "src": "/logos/apple-music.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://music.apple.com/",
+    "assetSource": "https://svgl.app/library/apple-music-icon.svg"
+  },
+  {
+    "slug": "bluesky",
+    "name": "Bluesky",
+    "src": "/logos/bluesky.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://blueskyweb.xyz/",
+    "assetSource": "https://svgl.app/library/bluesky.svg"
+  },
+  {
+    "slug": "microsoft-onedrive",
+    "name": "Microsoft OneDrive",
+    "src": "/logos/microsoft-onedrive.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.microsoft.com/microsoft-365/onedrive/online-cloud-storage",
+    "assetSource": "https://svgl.app/library/microsoft-onedrive.svg"
+  },
+  {
+    "slug": "microsoft-outlook",
+    "name": "Microsoft Outlook",
+    "src": "/logos/microsoft-outlook.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.microsoft.com/microsoft-365/outlook/email-and-calendar-software-application",
+    "assetSource": "https://svgl.app/library/microsoft-outlook.svg"
+  },
+  {
+    "slug": "youtube-music",
+    "name": "Youtube Music",
+    "src": "/logos/youtube-music.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://music.youtube.com/",
+    "assetSource": "https://svgl.app/library/youtube_music.svg"
+  },
+  {
+    "slug": "figma",
+    "name": "Figma",
+    "src": "/logos/figma.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.figma.com/",
+    "assetSource": "https://svgl.app/library/figma.svg"
+  },
+  {
+    "slug": "soundcloud",
+    "name": "SoundCloud",
+    "src": "/logos/soundcloud.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://soundcloud.com/",
+    "assetSource": "https://svgl.app/library/soundcloud-logo.svg"
+  },
+  {
+    "slug": "acrobat-reader",
+    "name": "Acrobat Reader",
+    "src": "/logos/acrobat-reader.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.adobe.com/acrobat/pdf-reader.html",
+    "assetSource": "https://svgl.app/library/acrobat-reader.svg"
+  },
+  {
+    "slug": "hulu",
+    "name": "Hulu",
+    "src": "/logos/hulu.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.hulu.com/",
+    "assetSource": "https://svgl.app/library/hulu.svg"
+  },
+  {
+    "slug": "roblox",
+    "name": "Roblox",
+    "src": "/logos/roblox.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.roblox.com/",
+    "assetSource": "https://svgl.app/library/roblox_light.svg"
+  },
+  {
+    "slug": "brave-browser",
+    "name": "Brave Browser",
+    "src": "/logos/brave-browser.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://brave.com/",
+    "assetSource": "https://svgl.app/library/brave.svg"
+  },
+  {
+    "slug": "opera",
+    "name": "Opera",
+    "src": "/logos/opera.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.opera.com",
+    "assetSource": "https://svgl.app/library/opera.svg"
+  },
+  {
+    "slug": "edge",
+    "name": "Edge",
+    "src": "/logos/edge.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.microsoft.com/en-us/edge",
+    "assetSource": "https://svgl.app/library/edge.svg"
+  },
+  {
+    "slug": "steam",
+    "name": "Steam",
+    "src": "/logos/steam.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://store.steampowered.com/",
+    "assetSource": "https://svgl.app/library/steam.svg"
+  },
+  {
+    "slug": "openai",
+    "name": "OpenAI",
+    "src": "/logos/openai.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://openai.com/",
+    "assetSource": "https://svgl.app/library/openai.svg"
+  },
+  {
+    "slug": "gitlab",
+    "name": "GitLab",
+    "src": "/logos/gitlab.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://gitlab.com/",
+    "assetSource": "https://svgl.app/library/gitlab.svg"
+  },
+  {
+    "slug": "trello",
+    "name": "Trello",
+    "src": "/logos/trello.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://trello.com/",
+    "assetSource": "https://svgl.app/library/trello.svg"
+  },
+  {
+    "slug": "salesforce",
+    "name": "Salesforce",
+    "src": "/logos/salesforce.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.salesforce.com",
+    "assetSource": "https://svgl.app/library/salesforce.svg"
+  },
+  {
+    "slug": "asana",
+    "name": "Asana",
+    "src": "/logos/asana.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://asana.com",
+    "assetSource": "https://svgl.app/library/asana-logo.svg"
+  },
+  {
+    "slug": "docker",
+    "name": "Docker",
+    "src": "/logos/docker.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.docker.com/",
+    "assetSource": "https://svgl.app/library/docker.svg"
+  },
+  {
+    "slug": "coursera",
+    "name": "Coursera",
+    "src": "/logos/coursera.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.coursera.org/",
+    "assetSource": "https://svgl.app/library/coursera.svg"
+  },
+  {
+    "slug": "wordpress",
+    "name": "WordPress",
+    "src": "/logos/wordpress.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://wordpress.org/",
+    "assetSource": "https://svgl.app/library/wordpress.svg"
+  },
+  {
+    "slug": "udemy",
+    "name": "Udemy",
+    "src": "/logos/udemy.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.udemy.com/",
+    "assetSource": "https://svgl.app/library/udemy.svg"
+  },
+  {
+    "slug": "coinbase",
+    "name": "Coinbase",
+    "src": "/logos/coinbase.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://www.coinbase.com/",
+    "assetSource": "https://svgl.app/library/coinbase.svg"
+  },
+  {
+    "slug": "google-classroom",
+    "name": "Google Classroom",
+    "src": "/logos/google-classroom.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://edu.google.com/workspace-for-education/products/classroom/",
+    "assetSource": "https://svgl.app/library/google-classroom.svg"
+  },
+  {
+    "slug": "google-chat",
+    "name": "Google Chat",
+    "src": "/logos/google-chat.svg",
+    "region": "International",
+    "provider": "SVGL",
+    "source": "https://chat.google.com/",
+    "assetSource": "https://svgl.app/library/google-chat.svg"
+  },
+  {
+    "slug": "safaricom",
+    "name": "Safaricom",
+    "src": "/logos/safaricom.svg",
+    "region": "Kenya",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:Safaricom-logo-png_seeklogo-530479.svg",
+    "sourceFile": "File:Safaricom-logo-png seeklogo-530479.svg",
+    "author": "SeekLogo",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+  },
+  {
+    "slug": "m-pesa",
+    "name": "M-PESA",
+    "src": "/logos/m-pesa.svg",
+    "region": "Kenya",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:M-PESA_LOGO-01.svg",
+    "sourceFile": "File:M-PESA LOGO-01.svg",
+    "author": "Vodafone",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:M-PESA_LOGO-01.svg"
+  },
+  {
+    "slug": "kenya-airways",
+    "name": "Kenya Airways",
+    "src": "/logos/kenya-airways.svg",
+    "region": "Kenya",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:Kenya_Airways_Logo.svg",
+    "sourceFile": "File:Kenya Airways Logo.svg",
+    "author": "Kenya Airways",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:Kenya_Airways_Logo.svg"
+  },
+  {
+    "slug": "co-operative-bank",
+    "name": "Co-operative Bank",
+    "src": "/logos/co-operative-bank.svg",
+    "region": "Kenya",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:Coopbanklogo.jpg",
+    "sourceFile": "File:Coopbanklogo.jpg",
+    "author": "Coopbank of Kenya",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:Coopbanklogo.jpg"
+  },
+  {
+    "slug": "jumia",
+    "name": "Jumia",
+    "src": "/logos/jumia.svg",
+    "region": "Africa",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:JumiaLogo_(14).png",
+    "sourceFile": "File:JumiaLogo (14).png",
+    "author": "JumiaGroup",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "slug": "mtn",
+    "name": "MTN",
+    "src": "/logos/mtn.svg",
+    "region": "Africa",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:MTN_Logo.svg",
+    "sourceFile": "File:MTN Logo.svg",
+    "author": "MTN",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:MTN_Logo.svg"
+  },
+  {
+    "slug": "shoprite",
+    "name": "Shoprite",
+    "src": "/logos/shoprite.svg",
+    "region": "Africa",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:Logo_-_Shoprite_-_SUPERMARCE.jpg",
+    "sourceFile": "File:Logo - Shoprite - SUPERMARCE.jpg",
+    "author": "Martin a1999a",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:Logo_-_Shoprite_-_SUPERMARCE.jpg"
+  },
+  {
+    "slug": "dstv",
+    "name": "DStv",
+    "src": "/logos/dstv.svg",
+    "region": "Africa",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:DStv_Logo_2012.png",
+    "sourceFile": "File:DStv Logo 2012.png",
+    "author": "Gadgenator",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "slug": "ethiopian-airlines",
+    "name": "Ethiopian Airlines",
+    "src": "/logos/ethiopian-airlines.svg",
+    "region": "Africa",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:Ethiopian_Airlines_Logo.svg",
+    "sourceFile": "File:Ethiopian Airlines Logo.svg",
+    "author": "Ethiopian Airlines",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:Ethiopian_Airlines_Logo.svg"
+  },
+  {
+    "slug": "ecobank",
+    "name": "Ecobank",
+    "src": "/logos/ecobank.svg",
+    "region": "Africa",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:Ecobank_Logo.svg",
+    "sourceFile": "File:Ecobank Logo.svg",
+    "author": "Ecobank Transnational Incorporated",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:Ecobank_Logo.svg"
+  },
+  {
+    "slug": "absa",
+    "name": "Absa",
+    "src": "/logos/absa.svg",
+    "region": "Africa",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:Absa_Logo.svg",
+    "sourceFile": "File:Absa Logo.svg",
+    "author": "Absa Group Limited",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:Absa_Logo.svg"
+  },
+  {
+    "slug": "flutterwave",
+    "name": "Flutterwave",
+    "src": "/logos/flutterwave.svg",
+    "region": "Africa",
+    "provider": "Wikimedia Commons",
+    "source": "https://commons.wikimedia.org/wiki/File:Flutterwave_Logo.png",
+    "sourceFile": "File:Flutterwave Logo.png",
+    "author": "Opelogbon",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+  }
+]

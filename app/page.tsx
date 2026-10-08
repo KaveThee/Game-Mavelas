@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Check,
+  ClipboardList,
   Clock,
   Copy,
   Crown,
@@ -17,115 +18,48 @@ import {
   Monitor,
   Play,
   Plus,
+  Route,
   RotateCcw,
   ScanLine,
+  Send,
+  Shapes,
   Sparkles,
   Trophy,
+  Trash2,
   Users,
+  type LucideIcon,
 } from "lucide-react";
+import {
+  classicGames as games,
+  findPlayableGame,
+  getGameTitle,
+  playableGames,
+  triviaBranches,
+} from "@/lib/games/registry";
+import { isGameEnabled } from "@/lib/games/feature-flags";
+import type { GameIconKey, GameDefinition } from "@/lib/games/types";
 import { ensureGameIdentity, supabase } from "@/lib/supabase";
 
-const triviaBranches = [
-  {
-    id: "trivia-kenya",
-    title: "Home Turf",
-    kicker: "Kenya & East Africa",
-    icon: Sparkles,
-    color: "pink",
-    template: "trivia_vault_kenya",
-    description: "A three-round Kenya and East Africa challenge, from warm-up facts to proper local knowledge.",
-    meta: "15 questions · 100 → 200 points · Kenya focus",
-    instructions: "Choose an answer on your phone before the timer ends. Each round gets tougher and earns more points.",
-    isSupported: true,
-  },
-  {
-    id: "trivia-scitech",
-    title: "Brain Buzz",
-    kicker: "Science & Technology",
-    icon: Sparkles,
-    color: "pink",
-    template: "trivia_vault_scitech",
-    description: "Test the table on science and technology through three escalating rounds.",
-    meta: "15 questions · 100 → 200 points · Science + tech",
-    instructions: "Start with a warm-up, then progress into technology and the final hard round.",
-    isSupported: true,
-  },
-  {
-    id: "trivia-mix",
-    title: "Anything Goes",
-    kicker: "Mixed knowledge",
-    icon: Sparkles,
-    color: "pink",
-    template: "trivia_vault_mix",
-    description: "A broad general-knowledge run for mixed groups, with a clear Easy, Medium and Hard finish.",
-    meta: "15 questions · 100 → 200 points · Mixed topics",
-    instructions: "Every correct tap scores. The final round is worth the most, so no lead is safe.",
-    isSupported: true,
-  },
-];
+const gameIcons: Partial<Record<GameIconKey, LucideIcon>> = {
+  sparkles: Sparkles,
+  map: MapPinned,
+  image: ImageIcon,
+  shapes: Shapes,
+  scan: ScanLine,
+  route: Route,
+};
 
-const games = [
-  {
-    id: "trivia",
-    title: "Trivia Vault",
-    kicker: "Pick your branch",
-    icon: Sparkles,
-    color: "pink",
-    description: "Choose a themed quiz branch: Home Turf, Brain Buzz, or Anything Goes.",
-    meta: "3 branches · 15 questions · 100 → 200 points",
-    template: "",
-    instructions: "Pick a Trivia Vault branch before starting.",
-    isSupported: true,
-  },
-  {
-    id: "flags",
-    title: "Flag Frenzy",
-    kicker: "Fastest finger wins",
-    icon: MapPinned,
-    color: "yellow",
-    template: "flag_frenzy_africa",
-    description: "Spot the country from its flag before the countdown runs down.",
-    meta: "15, 30, 45 or 60 flags · 30 seconds each",
-    instructions: "A flag will display on the screen. Tap the matching country name as fast as you can to score points!",
-    isSupported: true,
-  },
-  {
-    id: "who",
-    title: "Who Am I?",
-    kicker: "Talk, clue, guess",
-    icon: ImageIcon,
-    color: "lime",
-    template: "who_am_i_kenya",
-    description: "One player at a time discovers a famous face through yes-or-no questions from the table.",
-    meta: "Kenyan, African & global icons · Conversation rounds",
-    instructions: "The active player asks yes-or-no questions. Everyone else can see the secret identity and gives helpful clues. The active player then types a final guess.",
-    isSupported: true,
-  },
-  {
-    id: "image",
-    title: "Clue Heist",
-    kicker: "Guess early or steal",
-    icon: ScanLine,
-    color: "blue",
-    template: "clue_heist_classic",
-    description: "Solve a hidden image from up to 20 clues. Every extra clue lowers its value, and missed answers open the heist.",
-    meta: "20 clues · 100→5 points · Live steals",
-    instructions: "The spotlight player guesses first. A wrong answer opens the steal to everyone else for half the available points.",
-    isSupported: true,
-  },
+const enabledExpansionGames = playableGames.filter(
+  (game) => game.collection !== "mavelas-classics" && isGameEnabled(game),
+);
+const homeGames = [...games, ...enabledExpansionGames];
+const lobbyStandaloneGames = [
+  ...games.filter((game) => game.id !== "trivia"),
+  ...enabledExpansionGames,
 ];
-
-const playableGames = [...triviaBranches, ...games.filter((game) => game.id !== "trivia")];
 
 const flagRoundOptions = [15, 30, 45, 60] as const;
 type FlagRoundCount = (typeof flagRoundOptions)[number];
-
-const modeNames: Record<string, string> = {
-  trivia: "Trivia Vault",
-  flag_frenzy: "Flag Frenzy",
-  who_am_i: "Who Am I?",
-  guess_image: "Clue Heist",
-};
 
 function getFlagDifficulty(position?: number, totalRounds = 15): "Easy" | "Medium" | "Hard" | null {
   if (!position) return null;
@@ -159,6 +93,7 @@ type CurrentQuestion = {
 
 type MyAnswer = {
   has_answered: boolean;
+  timed_out?: boolean;
   selected_option_id?: string | null;
   is_revealed: boolean;
   is_correct?: boolean | null;
@@ -168,8 +103,10 @@ type MyAnswer = {
 };
 
 type LeaderboardEntry = {
+  id?: string;
   name: string;
   score: number;
+  position?: number;
   is_me: boolean;
   is_host: boolean;
 };
@@ -189,6 +126,13 @@ type ClueHeistState = {
   awarded_points: number;
 };
 
+type WhoAmIClue = {
+  id: string;
+  text: string;
+  is_mine: boolean;
+  sender: string;
+};
+
 type ServerGameState = {
   room_id: string;
   room_code: string;
@@ -199,6 +143,11 @@ type ServerGameState = {
   selected_game: string;
   state_version: number;
   my_score: number;
+  my_position?: number;
+  my_streak?: number;
+  board_length?: number;
+  current_round?: number;
+  total_rounds?: number;
   total_players: number;
   answered_count: number;
   slowest_player_name?: string | null;
@@ -206,6 +155,7 @@ type ServerGameState = {
   my_answer: MyAnswer;
   leaderboard: LeaderboardEntry[];
   clue_heist?: ClueHeistState | null;
+  who_am_i_clues?: WhoAmIClue[];
 };
 
 function getAllInMessage(name?: string | null, position = 0) {
@@ -237,7 +187,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
 
   const room = useMemo(() => serverState?.room_code || roomCode || "MAV1", [serverState?.room_code, roomCode]);
-  const chosenGame = playableGames.find((g) => g.id === selectedGame) ?? playableGames[0];
+  const chosenGame = findPlayableGame(selectedGame) ?? playableGames[0];
   const livePhase = serverState?.phase;
   const liveRoundId = serverState?.current_question?.round_id;
   const liveRoundClosesAt = serverState?.current_question?.closes_at;
@@ -263,7 +213,15 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
       }
 
       if (data) {
-        const state = data as ServerGameState;
+        let state = data as ServerGameState;
+        if (state.selected_game === "trivia_dash") {
+          const { data: dashData, error: dashError } = await supabase.rpc(
+            "get_trivia_dash_player_state",
+            { p_room_id: id },
+          );
+          if (dashError) throw dashError;
+          state = dashData as ServerGameState;
+        }
         if (state.phase === "all_answered") {
           const { data: publicState } = await supabase.rpc("get_public_room_state", {
             p_room_code: state.room_code,
@@ -276,6 +234,12 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
           });
           state.clue_heist = clueData as ClueHeistState | null;
         }
+        if (state.current_question?.game_mode === "who_am_i") {
+          const { data: whoClues } = await supabase.rpc("get_who_am_i_round_clues", {
+            p_round_id: state.current_question.round_id,
+          });
+          state.who_am_i_clues = (whoClues as WhoAmIClue[] | null) ?? [];
+        }
         setServerState(state);
         setIsHost(state.is_host);
         setHostName(state.host_name);
@@ -283,7 +247,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
         // Sync selected game if in lobby
         if (state.status === "lobby") {
-          const matched = playableGames.find((g) => g.id === state.selected_game || g.template === state.selected_game);
+          const matched = findPlayableGame(state.selected_game);
           if (matched) setSelectedGame(matched.id);
           setScreen("lobby");
         } else if (state.status === "playing") {
@@ -406,13 +370,16 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     const client = supabase;
 
     const timer = window.setTimeout(() => {
+      const revealRpc = serverState?.selected_game === "trivia_dash"
+        ? "reveal_trivia_dash_round"
+        : "auto_reveal_round";
       void client
-        .rpc("auto_reveal_round", { p_room_id: liveRoomId })
+        .rpc(revealRpc, { p_room_id: liveRoomId })
         .then(() => refreshGameState());
     }, allInReady ? 3100 : 250);
 
     return () => window.clearTimeout(timer);
-  }, [livePhase, liveRoundId, liveRoomId, refreshGameState, secondsRemaining]);
+  }, [livePhase, liveRoundId, liveRoomId, refreshGameState, secondsRemaining, serverState?.selected_game]);
 
   // Reveals stay on screen long enough to celebrate, then the server advances.
   useEffect(() => {
@@ -420,13 +387,16 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     const client = supabase;
 
     const timer = window.setTimeout(() => {
+      const advanceRpc = serverState?.selected_game === "trivia_dash"
+        ? "advance_trivia_dash_round"
+        : "auto_advance_round";
       void client
-        .rpc("auto_advance_round", { p_room_id: liveRoomId })
+        .rpc(advanceRpc, { p_room_id: liveRoomId })
         .then(() => refreshGameState());
     }, 6200);
 
     return () => window.clearTimeout(timer);
-  }, [livePhase, liveRoundId, liveRoomId, refreshGameState]);
+  }, [livePhase, liveRoundId, liveRoomId, refreshGameState, serverState?.selected_game]);
 
   // Synchronized countdown timer for player controller
   useEffect(() => {
@@ -454,10 +424,12 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     try {
       await ensureGameIdentity();
       if (!supabase) throw new Error("Live game service not configured.");
-      const { data: created, error: roomError } = await supabase.rpc("create_game_room", {
-        p_nickname: name.trim(),
-        p_selected_game: selectedGame,
-      });
+      const { data: created, error: roomError } = selectedGame === "trivia-dash"
+        ? await supabase.rpc("create_trivia_dash_room", { p_nickname: name.trim() })
+        : await supabase.rpc("create_game_room", {
+            p_nickname: name.trim(),
+            p_selected_game: selectedGame,
+          });
       if (roomError || !created) throw roomError ?? new Error("Could not create the room.");
 
       const room = created as { id: string; code: string };
@@ -536,10 +508,12 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   async function handleSelectGame(gameId: string) {
     if (!isHost || !liveRoomId || !supabase) return;
     setConnectionError("");
-    const { error } = await supabase.rpc("select_room_game", {
-      p_room_id: liveRoomId,
-      p_selected_game: gameId,
-    });
+    const { error } = gameId === "trivia-dash"
+      ? await supabase.rpc("select_trivia_dash_room", { p_room_id: liveRoomId })
+      : await supabase.rpc("select_room_game", {
+          p_room_id: liveRoomId,
+          p_selected_game: gameId,
+        });
     if (error) {
       setConnectionError(error.message);
       return;
@@ -550,7 +524,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
   async function handleStartGame() {
     const game = playableGames.find((g) => g.id === selectedGame);
-    if (!game || !game.template) {
+    if (!game || !game.template || !isGameEnabled(game)) {
       setConnectionError("Choose a playable game or Trivia Vault branch first.");
       return;
     }
@@ -559,11 +533,13 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setConnectionError("");
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.rpc("start_game", {
-        p_room_id: liveRoomId,
-        p_template_code: game.template,
-        ...(game.id === "flags" ? { p_round_count: flagRoundCount } : {}),
-      });
+      const { error } = game.id === "trivia-dash"
+        ? await supabase.rpc("start_trivia_dash", { p_room_id: liveRoomId })
+        : await supabase.rpc("start_game", {
+            p_room_id: liveRoomId,
+            p_template_code: game.template,
+            ...(game.id === "flags" ? { p_round_count: flagRoundCount } : {}),
+          });
       if (error) throw error;
       await refreshGameState();
       setScreen("game");
@@ -612,6 +588,25 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     }
   }
 
+  async function handleWhoAmIClue(clue: string) {
+    if (!supabase || !serverState?.current_question?.round_id || isSubmitting) return;
+
+    setConnectionError("");
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("submit_who_am_i_clue", {
+        p_round_id: serverState.current_question.round_id,
+        p_clue: clue.trim(),
+      });
+      if (error) throw error;
+      await refreshGameState();
+    } catch (err) {
+      setConnectionError(err instanceof Error ? err.message : "Could not share that clue.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleClueHeistGuess(guess: string) {
     if (!supabase || !serverState?.current_question?.round_id || isSubmitting) return;
     setConnectionError("");
@@ -652,7 +647,10 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setConnectionError("");
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.rpc("host_replay_game", { p_room_id: liveRoomId });
+      const replayRpc = serverState?.selected_game === "trivia_dash"
+        ? "host_replay_trivia_dash"
+        : "host_replay_game";
+      const { error } = await supabase.rpc(replayRpc, { p_room_id: liveRoomId });
       if (error) throw error;
       await refreshGameState();
       setScreen("game");
@@ -668,7 +666,10 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setConnectionError("");
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.rpc("host_return_to_lobby", { p_room_id: liveRoomId });
+      const returnRpc = serverState?.selected_game === "trivia_dash"
+        ? "host_return_trivia_dash_to_lobby"
+        : "host_return_to_lobby";
+      const { error } = await supabase.rpc(returnRpc, { p_room_id: liveRoomId });
       if (error) throw error;
       await refreshGameState();
       setScreen("lobby");
@@ -709,6 +710,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         error={connectionError}
         onAnswer={handleSubmitAnswer}
         onWhoAmIGuess={handleWhoAmIGuess}
+        onWhoAmIClue={handleWhoAmIClue}
         onClueHeistGuess={handleClueHeistGuess}
         onNextClue={handleNextClue}
       />
@@ -719,6 +721,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     return (
       <ResultsScreen
         room={room}
+        gameMode={serverState.selected_game}
         isHost={isHost}
         leaderboard={serverState.leaderboard}
         isSubmitting={isSubmitting}
@@ -906,16 +909,16 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
             <span className="text-sm text-[#d7ff3f] font-bold">Phase 3 Live</span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {games.map((game) => {
-              const Icon = game.icon;
+            {homeGames.map((game) => {
+              const Icon = gameIcons[game.icon] ?? Gamepad2;
               return (
                 <article
-                  className={`game-card ${game.color} ${!game.isSupported ? "opacity-65" : ""}`}
+                  className={`game-card ${game.color} ${!isGameEnabled(game) ? "opacity-65" : ""}`}
                   key={game.id}
                 >
                   <div className="flex items-center justify-between">
                     <Icon size={26} strokeWidth={2.6} />
-                    {game.isSupported && (
+                    {isGameEnabled(game) && (
                       <span className="rounded-full bg-black/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider">
                         Playable
                       </span>
@@ -974,7 +977,7 @@ function Lobby({
   hostName: string;
   selectedGame: string;
   setSelectedGame: (id: string) => void;
-  chosenGame: typeof playableGames[number];
+  chosenGame: GameDefinition;
   flagRoundCount: FlagRoundCount;
   setFlagRoundCount: (count: FlagRoundCount) => void;
   isHost: boolean;
@@ -1094,8 +1097,8 @@ function Lobby({
                       ))}
                     </div>
                   </div>
-                  {games.filter((game) => game.id !== "trivia").map((game) => {
-                    const Icon = game.icon;
+                  {lobbyStandaloneGames.map((game) => {
+                    const Icon = gameIcons[game.icon] ?? Gamepad2;
                     return (
                       <button
                         type="button"
@@ -1150,7 +1153,7 @@ function Lobby({
 
                   <button
                     className="button-lime mt-5 w-full flex items-center justify-center gap-2"
-                    disabled={isPlaying || !chosenGame.isSupported}
+                    disabled={isPlaying || !isGameEnabled(chosenGame)}
                     onClick={onStart}
                   >
                     <Play size={16} fill="currentColor" />
@@ -1203,6 +1206,7 @@ function GameScreen({
   error,
   onAnswer,
   onWhoAmIGuess,
+  onWhoAmIClue,
   onClueHeistGuess,
   onNextClue,
 }: {
@@ -1212,6 +1216,7 @@ function GameScreen({
   error: string;
   onAnswer: (optionId: string) => void;
   onWhoAmIGuess: (guess: string) => void;
+  onWhoAmIClue: (clue: string) => Promise<void>;
   onClueHeistGuess: (guess: string) => void;
   onNextClue: () => void;
 }) {
@@ -1222,10 +1227,40 @@ function GameScreen({
   const hasAnswered = myAnswer.has_answered;
   const isWhoAmI = question?.game_mode === "who_am_i";
   const isClueHeist = question?.game_mode === "guess_image";
+  const isTriviaDash = question?.game_mode === "trivia_dash";
   const heist = state.clue_heist;
   const [guess, setGuess] = useState("");
+  const [clueDraft, setClueDraft] = useState("");
+  const [clipboardDraft, setClipboardDraft] = useState("");
+  const [clipboards, setClipboards] = useState<Record<string, Array<{ id: string; text: string; checked: boolean }>>>({});
 
-  const modeLabel = modeNames[question?.game_mode || ""] || "Game Mavelas";
+  const clipboardKey = question?.round_id ? `mavelas-who-clipboard-${question.round_id}` : "";
+  const clipboard = clipboards[clipboardKey] ?? (() => {
+    if (!clipboardKey || typeof window === "undefined") return [];
+    try {
+      const saved = window.localStorage.getItem(clipboardKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  function saveClipboard(next: Array<{ id: string; text: string; checked: boolean }>) {
+    if (!clipboardKey) return;
+    setClipboards((current) => ({ ...current, [clipboardKey]: next }));
+    if (clipboardKey && typeof window !== "undefined") {
+      window.localStorage.setItem(clipboardKey, JSON.stringify(next));
+    }
+  }
+
+  function addClipboardQuestion() {
+    const text = clipboardDraft.trim();
+    if (!text) return;
+    saveClipboard([...clipboard, { id: crypto.randomUUID(), text, checked: false }]);
+    setClipboardDraft("");
+  }
+
+  const modeLabel = getGameTitle(question?.game_mode);
   const flagDifficulty =
     question?.game_mode === "flag_frenzy" ? getFlagDifficulty(question.position, question.total_rounds) : null;
 
@@ -1250,7 +1285,12 @@ function GameScreen({
             <span className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">
               {modeLabel}{flagDifficulty ? ` · ${flagDifficulty}` : ""} · Round {question?.position} of {question?.total_rounds || 10}
             </span>
-            <p className="text-sm text-white/50">Score: <strong className="text-white font-mono">{state.my_score} pts</strong></p>
+            <p className="text-sm text-white/50">
+              {isTriviaDash ? "Race: " : "Score: "}
+              <strong className="text-white font-mono">
+                {isTriviaDash ? `${state.my_position ?? 0}/${state.board_length ?? 24} spaces` : `${state.my_score} pts`}
+              </strong>
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -1282,6 +1322,22 @@ function GameScreen({
               </h1>
               {!isRevealed && !isWhoAmI && !isClueHeist && <p className="mt-2 text-sm font-bold text-black/55">Tap the letter that matches the answer on TV.</p>}
 
+              {isTriviaDash && (
+                <div className="mt-6 rounded-2xl bg-black/[.06] p-4">
+                  <div className="flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[.12em] text-black/55">
+                    <span>Board position {state.my_position ?? 0} / {state.board_length ?? 24}</span>
+                    <span>Streak {state.my_streak ?? 0}</span>
+                  </div>
+                  <div className="mt-3 h-4 overflow-hidden rounded-full border-2 border-[#101314] bg-white">
+                    <div
+                      className="h-full bg-[#d7ff3f] transition-[width] duration-700"
+                      style={{ width: `${Math.min(100, ((state.my_position ?? 0) / (state.board_length ?? 24)) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs font-bold text-black/55">Correct: +2 spaces · Every third correct in a row: +1 bonus</p>
+                </div>
+              )}
+
               {isClueHeist && !isRevealed && (
                 <div className="mt-6 space-y-4">
                   <div className={`rounded-2xl p-4 ${heist?.turn_phase === "steal" ? "bg-rose-100 text-rose-950" : "bg-black/[.06]"}`}>
@@ -1308,8 +1364,45 @@ function GameScreen({
 
               {isWhoAmI && !isRevealed && (
                 question?.is_active_player ? (
-                  <div className="mt-6 rounded-2xl bg-black/[.06] p-5">
-                    <p className="text-sm font-bold text-black/65">Ask the table yes-or-no questions. When you are ready, type your one final guess.</p>
+                  <div className="mt-6 space-y-4">
+                    <div className="rounded-2xl border-2 border-[#101314] bg-[#fffdf8] p-5 shadow-[0_6px_0_#101314]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <ClipboardList size={21} />
+                          <p className="font-black">My question clipboard</p>
+                        </div>
+                        <span className="rounded-full bg-black/10 px-2.5 py-1 font-mono text-xs font-black">PRIVATE</span>
+                      </div>
+                      <p className="mt-2 text-sm font-bold text-black/55">Keep track of what you have asked. These notes stay on this phone.</p>
+                      <form className="mt-4 flex gap-2" onSubmit={(event) => { event.preventDefault(); addClipboardQuestion(); }}>
+                        <input value={clipboardDraft} onChange={(event) => setClipboardDraft(event.target.value)} maxLength={80} placeholder="e.g. Am I an athlete?" className="min-w-0 flex-1 rounded-xl border-2 border-[#101314] bg-white px-4 py-3 text-sm font-bold outline-none focus:ring-4 focus:ring-[#d7ff3f]/50" />
+                        <button className="button-dark px-4 text-sm" disabled={!clipboardDraft.trim()} type="submit"><Plus size={17} /></button>
+                      </form>
+                      <div className="mt-3 max-h-52 space-y-2 overflow-y-auto">
+                        {clipboard.length === 0 && <p className="rounded-xl bg-black/[.05] p-3 text-center text-xs font-bold text-black/45">Your asked questions will appear here.</p>}
+                        {clipboard.map((item) => (
+                          <div key={item.id} className="flex items-center gap-2 rounded-xl bg-black/[.06] px-3 py-2.5">
+                            <button type="button" aria-label={item.checked ? "Mark question unanswered" : "Mark question answered"} onClick={() => saveClipboard(clipboard.map((entry) => entry.id === item.id ? { ...entry, checked: !entry.checked } : entry))} className={`grid h-6 w-6 shrink-0 place-items-center rounded-md border-2 border-[#101314] ${item.checked ? "bg-[#d7ff3f]" : "bg-white"}`}>
+                              {item.checked && <Check size={15} strokeWidth={4} />}
+                            </button>
+                            <span className={`min-w-0 flex-1 text-sm font-bold ${item.checked ? "text-black/40 line-through" : ""}`}>{item.text}</span>
+                            <button type="button" aria-label="Delete question" onClick={() => saveClipboard(clipboard.filter((entry) => entry.id !== item.id))} className="rounded-lg p-1.5 text-black/35 hover:bg-rose-100 hover:text-rose-700"><Trash2 size={16} /></button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-[#d7ff3f] p-5">
+                      <p className="text-xs font-black uppercase tracking-[.14em] text-black/50">Clues from the table</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {state.who_am_i_clues?.length ? state.who_am_i_clues.map((clue) => (
+                          <span key={clue.id} className="rounded-full border-2 border-[#101314] bg-white px-3 py-1.5 text-sm font-black">{clue.text}</span>
+                        )) : <p className="text-sm font-bold text-black/55">No clues yet. Keep interrogating the table.</p>}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-black/[.06] p-5">
+                    <p className="text-sm font-bold text-black/65">Ready to commit? You get one final identity guess.</p>
                     <form
                       className="mt-4 flex gap-2"
                       onSubmit={(event) => {
@@ -1329,21 +1422,31 @@ function GameScreen({
                         Guess
                       </button>
                     </form>
+                    </div>
                   </div>
                 ) : (
                   <div className="mt-6 rounded-2xl border-2 border-[#101314] bg-[#101314] p-5 text-[#d7ff3f] shadow-[0_6px_0_#101314]">
                     <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]/70">Keep it secret from {question?.active_player_name || "the guesser"}</p>
-                    {question?.media?.type === "image" && (
-                      <Image
-                        src={question.media.url}
-                        alt={question.media.alt}
-                        width={512}
-                        height={512}
-                        className="mt-4 aspect-square w-full max-w-sm rounded-3xl border-4 border-white/10 bg-[#d7ff3f] object-cover"
-                      />
-                    )}
-                    <p className="mt-2 text-3xl font-black tracking-[-.05em]">{question?.secret_identity || "Identity loading…"}</p>
-                    <p className="mt-2 text-sm font-bold text-white/65">Answer only yes-or-no questions and give fair clues.</p>
+                    <div className="mt-4 grid gap-5 sm:grid-cols-[.9fr_1.1fr] sm:items-start">
+                      <div>
+                        {question?.media?.type === "image" && (
+                          <Image src={question.media.url} alt={question.media.alt} width={512} height={512} unoptimized className="aspect-square w-full rounded-3xl border-4 border-white/10 bg-[#d7ff3f] object-cover" />
+                        )}
+                        <p className="mt-3 text-3xl font-black tracking-[-.05em]">{question?.secret_identity || "Identity loading…"}</p>
+                      </div>
+                      <div className="rounded-2xl bg-white p-4 text-[#101314]">
+                        <div className="flex items-center gap-2"><Send size={18} /><p className="font-black">Clue pad</p></div>
+                        <p className="mt-1 text-xs font-bold text-black/50">Send short, fair hints while the guesser asks questions.</p>
+                        <form className="mt-3 space-y-2" onSubmit={(event) => { event.preventDefault(); const clue = clueDraft.trim(); if (!clue) return; void onWhoAmIClue(clue).then(() => setClueDraft("")); }}>
+                          <input value={clueDraft} onChange={(event) => setClueDraft(event.target.value)} maxLength={48} placeholder="Politics, athlete, Black, world star…" className="w-full rounded-xl border-2 border-[#101314] px-3 py-3 text-sm font-bold outline-none focus:ring-4 focus:ring-[#d7ff3f]/50" />
+                          <button type="submit" disabled={isSubmitting || clueDraft.trim().length < 2} className="button-dark flex w-full items-center justify-center gap-2 text-sm"><Send size={16} /> Share clue</button>
+                        </form>
+                        <div className="mt-3 flex max-h-36 flex-wrap gap-1.5 overflow-y-auto">
+                          {state.who_am_i_clues?.map((clue) => <span key={clue.id} title={`From ${clue.sender}`} className={`rounded-full px-2.5 py-1 text-xs font-black ${clue.is_mine ? "bg-[#d7ff3f]" : "bg-black/10"}`}>{clue.text}</span>)}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-sm font-bold text-white/65">Answer yes-or-no questions honestly. Do not say the name out loud.</p>
                   </div>
                 )
               )}
@@ -1411,6 +1514,8 @@ function GameScreen({
                     <p className="text-lg font-black">
                       {myAnswer.is_correct
                         ? `Correct! +${myAnswer.points_awarded || 100} pts`
+                        : myAnswer.timed_out
+                        ? "Did not answer in time"
                         : hasAnswered
                         ? "Not this one!"
                         : "Did not answer in time"}
@@ -1449,6 +1554,7 @@ function GameScreen({
 // RESULTS SCREEN
 function ResultsScreen({
   room,
+  gameMode,
   isHost,
   leaderboard,
   isSubmitting,
@@ -1458,6 +1564,7 @@ function ResultsScreen({
   onHome,
 }: {
   room: string;
+  gameMode: string;
   isHost: boolean;
   leaderboard: LeaderboardEntry[];
   isSubmitting: boolean;
@@ -1496,7 +1603,11 @@ function ResultsScreen({
                   {entry.is_me && <span className="text-[10px] uppercase font-bold text-black/60">(You)</span>}
                   {entry.is_host && <span className="text-[10px] uppercase font-bold bg-black/10 px-1.5 py-0.5 rounded">Host</span>}
                 </div>
-                <span className="font-mono font-black">{entry.score} pts</span>
+                <span className="font-mono font-black">
+                  {gameMode === "trivia_dash" && entry.position !== undefined
+                    ? `${entry.position}/24 spaces · ${entry.score} pts`
+                    : `${entry.score} pts`}
+                </span>
               </div>
             ))}
           </div>

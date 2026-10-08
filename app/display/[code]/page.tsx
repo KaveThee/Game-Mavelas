@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Gamepad2, Trophy, Users, Clock, QrCode, CheckCircle2 } from "lucide-react";
 import QRCode from "qrcode";
+import { getGameTitle } from "@/lib/games/registry";
+import { assertPublicStateSafe, asMavelasRoomPhase } from "@/lib/games/state-boundaries";
 import { ensureGameIdentity, supabase } from "@/lib/supabase";
 
 type PublicPlayer = {
+  id?: string;
   name: string;
   score: number;
+  position?: number;
   seat?: number | null;
   has_answered?: boolean;
   role?: "host" | "player" | "spectator";
@@ -60,14 +64,20 @@ type PublicClueHeist = {
   awarded_points: number;
 };
 
-const gameName: Record<string, string> = {
-  who_am_i: "Who Am I?",
-  flag_frenzy: "Flag Frenzy",
-  trivia: "Trivia Vault",
-  "trivia-kenya": "Trivia Vault · Home Turf",
-  "trivia-scitech": "Trivia Vault · Brain Buzz",
-  "trivia-mix": "Trivia Vault · Anything Goes",
-  guess_image: "Clue Heist",
+type PublicTriviaDash = {
+  room_code: string;
+  status: string;
+  phase: string;
+  game_mode: "trivia_dash";
+  game_title?: string | null;
+  state_version: number;
+  round_ends_at?: string | null;
+  board_length: number;
+  current_round: number;
+  total_rounds: number;
+  question: Omit<PublicRound, "position" | "total_rounds" | "game_mode" | "duration_seconds"> | null;
+  players: PublicPlayer[];
+  winner_ids: string[];
 };
 
 function getFlagDifficulty(position?: number, totalRounds = 15): "Easy" | "Medium" | "Hard" | null {
@@ -153,12 +163,50 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
         if (roomError || roundError) throw roomError || roundError;
         if (!roomData) throw new Error("This room is no longer available.");
 
-        setRoom(roomData as PublicRoom);
-        const nextRound = roundData as PublicRound | null;
+        let nextRoom = roomData as PublicRoom;
+        let nextRound = roundData as PublicRound | null;
+        let publicPhase = asMavelasRoomPhase(nextRoom.phase || nextRoom.status);
+
+        if (nextRoom.game_mode === "trivia_dash") {
+          const { data: dashData, error: dashError } = await client.rpc(
+            "get_public_trivia_dash_state",
+            { p_room_code: code },
+          );
+          if (dashError || !dashData) throw dashError ?? new Error("Trivia Dash state is unavailable.");
+
+          const dash = dashData as PublicTriviaDash;
+          publicPhase = asMavelasRoomPhase(dash.phase || dash.status);
+          assertPublicStateSafe(dash, publicPhase);
+          nextRoom = {
+            ...nextRoom,
+            status: dash.status,
+            phase: dash.phase,
+            game_mode: dash.game_mode,
+            game_title: dash.game_title,
+            state_version: dash.state_version,
+            round_ends_at: dash.round_ends_at,
+            total_players: dash.players.length,
+            answered_count: dash.players.filter((player) => player.has_answered).length,
+            players: dash.players,
+          };
+          nextRound = dash.question ? {
+            ...dash.question,
+            position: dash.current_round,
+            total_rounds: dash.total_rounds,
+            game_mode: "trivia_dash",
+            duration_seconds: 25,
+          } : null;
+        }
+
+        assertPublicStateSafe(nextRoom, publicPhase);
+        assertPublicStateSafe(nextRound, publicPhase);
+        setRoom(nextRoom);
         setRound(nextRound);
         if (nextRound?.game_mode === "guess_image") {
           const { data: clueData, error: clueError } = await client.rpc("get_public_clue_heist_state", { p_room_code: code });
           if (clueError) throw clueError;
+          const cluePhase = (clueData as PublicClueHeist | null)?.turn_phase === "revealed" ? "revealed" : publicPhase;
+          assertPublicStateSafe(clueData, cluePhase);
           setHeist(clueData as PublicClueHeist);
         } else {
           setHeist(null);
@@ -192,13 +240,15 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
     };
   }, [code]);
 
-  const title = room?.game_title || gameName[room?.game_mode ?? ""] || "Game Mavelas";
+  const title = room?.game_title || getGameTitle(room?.game_mode);
   const isLobby = !room || room.phase === "lobby" || room.phase === "selected" || room.status === "lobby";
   const isResults = room?.phase === "results" || room?.status === "results";
   const isRevealed = room?.phase === "revealed" || round?.status === "revealed";
   const allAnswersIn = room?.phase === "all_answered" && !isRevealed;
   const isWhoAmI = round?.game_mode === "who_am_i";
   const isClueHeist = round?.game_mode === "guess_image";
+  const isLogoQuiz = round?.game_mode === "logo_quiz";
+  const isTriviaDash = room?.game_mode === "trivia_dash";
   const flagDifficulty =
     round?.game_mode === "flag_frenzy" ? getFlagDifficulty(round.position, round.total_rounds) : null;
 
@@ -285,7 +335,9 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                     <span>{player.name}</span>
                     {index === 0 && <span className="text-xs uppercase tracking-wider bg-black/10 px-2 py-0.5 rounded-full">Winner</span>}
                   </div>
-                  <span className="font-mono font-black">{player.score} pts</span>
+                  <span className="font-mono font-black">
+                    {isTriviaDash ? `${player.position ?? 0}/24 spaces` : `${player.score} pts`}
+                  </span>
                 </div>
               ))}
             </div>
@@ -316,6 +368,46 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               <h1 className="mt-4 max-w-4xl whitespace-pre-line text-4xl font-black leading-[.94] tracking-[-.06em] sm:text-6xl lg:text-7xl">
                 {isLobby ? "THE TABLE\nIS GATHERING." : isClueHeist ? heist?.turn_phase === "steal" ? "STEAL\nTHE POINTS!" : `${(round?.active_player_name || "The player").toUpperCase()}\nIN THE SPOTLIGHT` : isWhoAmI ? `${(round?.active_player_name || "The guesser").toUpperCase()}\nIS UP!` : round?.prompt || "PLAY\nTOGETHER."}
               </h1>
+
+              {isTriviaDash && !isLobby && (
+                <div className="mt-7 max-w-5xl rounded-[2rem] border border-white/15 bg-white/[.05] p-5 shadow-2xl">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">24-space race board</p>
+                      <p className="mt-1 text-sm font-bold text-white/55">Correct +2 · every third consecutive correct +1</p>
+                    </div>
+                    <span className="rounded-full bg-[#d7ff3f] px-4 py-2 font-mono text-sm font-black text-[#101314]">
+                      Round {round?.position ?? 0}/12
+                    </span>
+                  </div>
+                  <div className="mt-5 grid grid-cols-8 gap-1.5 sm:grid-cols-12">
+                    {Array.from({ length: 24 }, (_, index) => index + 1).map((space) => {
+                      const occupants = room?.players.filter((player) => player.position === space) ?? [];
+                      return (
+                        <div
+                          key={space}
+                          className={`relative flex aspect-square min-h-11 items-center justify-center rounded-xl border text-xs font-black ${
+                            occupants.length ? "border-[#d7ff3f] bg-[#d7ff3f] text-[#101314]" : "border-white/10 bg-black/20 text-white/30"
+                          }`}
+                        >
+                          <span className={occupants.length ? "absolute left-1.5 top-1 text-[9px] opacity-55" : ""}>{space}</span>
+                          {occupants.length > 0 && (
+                            <span className="max-w-full truncate px-1 pt-2 text-center text-[10px] leading-tight">
+                              {occupants.slice(0, 2).map((player) => player.name.split(" ")[0]).join("/")}
+                              {occupants.length > 2 ? ` +${occupants.length - 2}` : ""}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {(room?.players.some((player) => (player.position ?? 0) === 0) ?? false) && (
+                    <p className="mt-3 text-xs font-bold text-white/50">
+                      Start: {room?.players.filter((player) => (player.position ?? 0) === 0).map((player) => player.name).join(", ")}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {isClueHeist && heist && heist.turn_phase !== "revealed" && (
                 <div className="mt-8 max-w-4xl space-y-4">
@@ -366,6 +458,22 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                     unoptimized
                     className="h-56 w-auto max-w-full rounded-3xl border-4 border-white/10 bg-white object-contain p-4 shadow-2xl sm:h-64"
                   />
+                </div>
+              )}
+
+              {/* Logo Rush keeps a generous white clear-space around each mark. */}
+              {isLogoQuiz && round?.media?.type === "logo" && (
+                <div className="mt-6 flex max-w-4xl items-center justify-start">
+                  <div className="grid h-48 w-full max-w-2xl place-items-center rounded-[2rem] border-4 border-white/10 bg-white p-8 shadow-2xl sm:h-56 lg:h-64">
+                    <Image
+                      src={round.media.url}
+                      alt={round.media.alt}
+                      width={960}
+                      height={480}
+                      unoptimized
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -501,7 +609,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                         {isRevealed && player.is_correct && player.points_awarded ? (
                           <span className="animate-bounce rounded-full bg-[#101314] px-2 py-1 text-xs text-[#d7ff3f]">+{player.points_awarded}</span>
                         ) : null}
-                        {player.score} pts
+                        {isTriviaDash ? `${player.position ?? 0}/24` : `${player.score} pts`}
                       </span>
                     </div>
                   ))
