@@ -208,7 +208,9 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
           sessionStorage.removeItem("mavelas_room_id");
           setLiveRoomId("");
           setScreen("home");
+          return;
         }
+        setConnectionError("Connection interrupted. Reconnecting…");
         return;
       }
 
@@ -244,6 +246,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         setIsHost(state.is_host);
         setHostName(state.host_name);
         if (state.room_code) setRoomCode(state.room_code);
+        setConnectionError((current) => current === "Connection interrupted. Reconnecting…" ? "" : current);
 
         // Sync selected game if in lobby
         if (state.status === "lobby") {
@@ -257,7 +260,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         }
       }
     } catch {
-      // Ignore network errors gracefully
+      setConnectionError("Connection interrupted. Reconnecting…");
     }
   }, [liveRoomId]);
 
@@ -353,10 +356,28 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
       .on("postgres_changes", { event: "*", schema: "public", table: "player_answers", filter: "room_id=eq." + liveRoomId }, () => {
         void refreshGameState();
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setConnectionError((current) => current === "Connection interrupted. Reconnecting…" ? "" : current);
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          setConnectionError("Connection interrupted. Reconnecting…");
+        }
+      });
+
+    const recoveryPoll = window.setInterval(() => {
+      void refreshGameState();
+    }, 4000);
+
+    const handleOnline = () => void refreshGameState();
+    const handleOffline = () => setConnectionError("Connection interrupted. Reconnecting…");
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     return () => {
       window.clearTimeout(initialRefresh);
+      window.clearInterval(recoveryPoll);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
       void client.removeChannel(channel);
     };
   }, [liveRoomId, refreshGameState]);
@@ -1294,7 +1315,7 @@ function GameScreen({
           </div>
 
           <div className="flex items-center gap-3">
-            {secondsRemaining !== null && !isRevealed && !isClueHeist && (
+            {secondsRemaining !== null && !isRevealed && (
               <div
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-mono text-lg font-black ${
                   secondsRemaining <= 5 ? "bg-rose-500/20 text-rose-400 animate-pulse" : "bg-white/10 text-[#d7ff3f]"
@@ -1493,9 +1514,9 @@ function GameScreen({
               )}
 
               {/* Timer expired before answer */}
-              {!hasAnswered && !isRevealed && !isClueHeist && secondsRemaining === 0 && (
+              {!hasAnswered && !isRevealed && secondsRemaining === 0 && (
                 <div className="mt-6 rounded-2xl bg-rose-100 p-4 text-center text-sm font-bold text-rose-900">
-                  Time is up! Submissions closed for this question.
+                  {isClueHeist ? "Time is up! The mystery is being revealed." : "Time is up! Submissions closed for this question."}
                 </div>
               )}
 

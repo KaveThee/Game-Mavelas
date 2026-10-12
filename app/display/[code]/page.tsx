@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Gamepad2, Trophy, Users, Clock, QrCode, CheckCircle2 } from "lucide-react";
 import QRCode from "qrcode";
@@ -107,6 +107,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [heist, setHeist] = useState<PublicClueHeist | null>(null);
+  const roomIdRef = useRef("");
 
   useEffect(() => {
     void params.then(({ code: roomCode }) => setCode(roomCode.toUpperCase()));
@@ -155,6 +156,14 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
     const load = async () => {
       try {
         await ensureGameIdentity();
+        if (!roomIdRef.current) {
+          const { data: memberRoom } = await client
+            .from("rooms")
+            .select("id")
+            .eq("code", code)
+            .maybeSingle();
+          if (memberRoom?.id) roomIdRef.current = memberRoom.id;
+        }
         const [{ data: roomData, error: roomError }, { data: roundData, error: roundError }] = await Promise.all([
           client.rpc("get_public_room_state", { p_room_code: code }),
           client.rpc("get_public_round_state", { p_room_code: code }),
@@ -240,6 +249,36 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
     };
   }, [code]);
 
+  // A display-first room registers this browser as a non-scoring spectator.
+  // That lets the display provide a second lifecycle clock when every phone is
+  // asleep or temporarily disconnected. Server checks still decide whether a
+  // reveal/advance is due, so duplicate calls are harmless.
+  useEffect(() => {
+    if (!supabase || !roomIdRef.current || room?.game_mode === "trivia_dash") return;
+    const client = supabase;
+
+    const shouldReveal = room?.phase === "all_answered"
+      || (room?.phase === "playing" && secondsRemaining === 0);
+    if (!shouldReveal) return;
+
+    const timer = window.setTimeout(() => {
+      void client.rpc("auto_reveal_round", { p_room_id: roomIdRef.current });
+    }, room.phase === "all_answered" ? 3100 : 250);
+
+    return () => window.clearTimeout(timer);
+  }, [room?.game_mode, room?.phase, room?.state_version, secondsRemaining]);
+
+  useEffect(() => {
+    if (!supabase || !roomIdRef.current || room?.game_mode === "trivia_dash" || room?.phase !== "revealed") return;
+    const client = supabase;
+
+    const timer = window.setTimeout(() => {
+      void client.rpc("auto_advance_round", { p_room_id: roomIdRef.current });
+    }, 6200);
+
+    return () => window.clearTimeout(timer);
+  }, [room?.game_mode, room?.phase, room?.state_version]);
+
   const title = room?.game_title || getGameTitle(room?.game_mode);
   const isLobby = !room || room.phase === "lobby" || room.phase === "selected" || room.status === "lobby";
   const isResults = room?.phase === "results" || room?.status === "results";
@@ -293,7 +332,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
           </div>
 
           <div className="flex items-center gap-4">
-            {!isLobby && !isResults && !isClueHeist && (
+            {!isLobby && !isResults && (
               <div
                 className={`flex items-center gap-2 rounded-2xl border px-5 py-3 font-mono text-2xl font-black transition-colors ${
                   secondsRemaining !== null && secondsRemaining <= 5
