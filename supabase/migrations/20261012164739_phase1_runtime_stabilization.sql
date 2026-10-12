@@ -1,4 +1,4 @@
--- Phase 1 runtime stabilization.
+-- Phase 1 runtime stabilization (hosted ledger version 20261012164739).
 --
 -- This migration intentionally does not enable any new game. It tightens the
 -- shared room lifecycle used by the existing games and by future modules.
