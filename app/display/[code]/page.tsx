@@ -105,6 +105,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const [round, setRound] = useState<PublicRound | null>(null);
   const [error, setError] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [joinHost, setJoinHost] = useState("game-mavelas.vercel.app");
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [heist, setHeist] = useState<PublicClueHeist | null>(null);
   const roomIdRef = useRef("");
@@ -115,6 +116,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
   useEffect(() => {
     if (!code || typeof window === "undefined") return;
+    setJoinHost(window.location.host);
     const joinUrl = `${window.location.origin}/?code=${code}`;
     QRCode.toDataURL(joinUrl, {
       width: 280,
@@ -594,9 +596,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                     <p className="mt-5 text-xl font-black">First phone becomes host</p>
                     <p className="mt-1.5 max-w-sm text-sm leading-6 text-white/60">
                       Scan to claim the game controls. Everyone after that joins as a player at{" "}
-                      <span className="font-mono text-white/80">
-                        {typeof window !== "undefined" ? window.location.host : "gamemavelas"}
-                      </span>
+                      <span className="font-mono text-white/80">{joinHost}</span>
                     </p>
                   </div>
                 </div>
