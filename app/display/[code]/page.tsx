@@ -116,7 +116,6 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
   useEffect(() => {
     if (!code || typeof window === "undefined") return;
-    setJoinHost(window.location.host);
     const joinUrl = `${window.location.origin}/?code=${code}`;
     QRCode.toDataURL(joinUrl, {
       width: 280,
@@ -126,7 +125,10 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
         light: "#ffffff",
       },
     })
-      .then(setQrDataUrl)
+      .then((dataUrl) => {
+        setJoinHost(window.location.host);
+        setQrDataUrl(dataUrl);
+      })
       .catch(console.error);
   }, [code]);
 

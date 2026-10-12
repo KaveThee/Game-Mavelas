@@ -26,3 +26,11 @@ Run `pnpm test:phase0` after changing the registry, collections, game availabili
 `trivia-dash/module.ts` is the first expansion module. It uses simultaneous answers, fixed movement for correct answers, and a small every-third-correct streak bonus. Response speed never changes movement. All players receive a result before the server advances the round, and reaching the final tile early does not end the shared question set.
 
 The eight rejected concepts are intentionally absent from the registry: Mafia Mayhem, Rhythm Rumble, Speed Racers, Zombie Survival, Stealth Heist, Dance Off, Laugh Out Loud, and Spatial Stackers.
+
+## Phase 2: social and word games
+
+Phase 2 is limited to Meme Factory, Bluff & Draw, Word Sabotage, and Word Search Race. Their modules are registered for contract testing but stay `planned`, so feature flags cannot accidentally expose them.
+
+The shared engines enforce private submissions, anonymous voting, self-vote rejection, bounded vector drawings, server-approved word lists, exact grid paths, action sequencing, idempotency, and rate limits. Phase 2 is not cleared until the database write RPCs, controller and display surfaces, reconnect recovery, and multi-device tests pass for all four games.
+
+Phase 3 games must remain untouched until that clearance is recorded.
