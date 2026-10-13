@@ -722,7 +722,9 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     if (!supabase || !liveRoomId || isSubmitting) return;
     if (typeof window !== "undefined" && !window.confirm(
       isHost
-        ? "Leave this game? Host controls will pass to the next player."
+        ? (serverState?.total_players ?? 0) > 1
+          ? "Leave this game? Host controls will pass to the next player."
+          : "Leave this game? The room will close because no players remain."
         : "Leave this game and remove yourself from the room?",
     )) return;
 
