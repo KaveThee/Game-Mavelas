@@ -585,7 +585,10 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setConnectionError("");
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.rpc("submit_game_answer", {
+      const answerRpc = serverState.current_question.game_mode === "trivia_dash"
+        ? "submit_trivia_dash_answer"
+        : "submit_game_answer";
+      const { error } = await supabase.rpc(answerRpc, {
         p_round_id: serverState.current_question.round_id,
         p_option_id: optionId,
       });

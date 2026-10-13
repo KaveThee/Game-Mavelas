@@ -11,6 +11,20 @@ async function loadTriviaDashMigration() {
   return readFile(new URL(filename, migrationDirectory), "utf8");
 }
 
+async function loadTriviaDashAnswerIsolationMigration() {
+  const files = await readdir(migrationDirectory);
+  const filename = files.find((file) => file.endsWith("_phase3_trivia_dash_answer_isolation.sql"));
+  assert.ok(filename, "Phase 3 Trivia Dash answer isolation migration is missing");
+  return readFile(new URL(filename, migrationDirectory), "utf8");
+}
+
+async function loadTriviaDashStartPerformanceMigration() {
+  const files = await readdir(migrationDirectory);
+  const filename = files.find((file) => file.endsWith("_phase3_trivia_dash_start_performance.sql"));
+  assert.ok(filename, "Phase 3 Trivia Dash start performance migration is missing");
+  return readFile(new URL(filename, migrationDirectory), "utf8");
+}
+
 test("Trivia Dash migration is additive and leaves Classic RPC definitions untouched", async () => {
   const sql = await loadTriviaDashMigration();
 
@@ -53,4 +67,31 @@ test("public Trivia Dash state reveals answers only after the round is revealed"
   assert.match(publicFunction, /'correct_option',\s*case\s+when\s+round\.status\s*=\s*'revealed'/i);
   assert.doesNotMatch(publicFunction, /'correct_option_id'/i);
   assert.doesNotMatch(publicFunction, /'correct_streak'/i);
+});
+
+test("Trivia Dash answers use an isolated RPC with complete participant gating", async () => {
+  const sql = await loadTriviaDashAnswerIsolationMigration();
+  const controller = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(sql, /create\s+or\s+replace\s+function\s+public\.submit_trivia_dash_answer\s*\(/i);
+  assert.match(sql, /selected_game\s+is\s+distinct\s+from\s+'trivia_dash'/i);
+  assert.match(sql, /rp\.role\s+in\s*\('host',\s*'player'\)/i);
+  assert.match(sql, /dash\.player_id\s*=\s*v_user/i);
+  assert.match(sql, /on\s+conflict\s*\(round_id,\s*player_id\)\s+do\s+nothing/i);
+  assert.match(sql, /v_answer_count\s*>=\s*v_participant_count/i);
+  assert.doesNotMatch(sql, /create\s+or\s+replace\s+function\s+public\.submit_game_answer\s*\(/i);
+  assert.match(controller, /game_mode\s*===\s*"trivia_dash"[\s\S]*"submit_trivia_dash_answer"/i);
+});
+
+test("Trivia Dash start ranks narrow ids and validates only selected questions", async () => {
+  const sql = await loadTriviaDashStartPerformanceMigration();
+  const rankedQuery = sql.match(/with ranked_question_ids as \([\s\S]*?\n\s*loop/i)?.[0];
+  assert.ok(rankedQuery, "Optimized Trivia Dash selection query is missing");
+
+  assert.match(rankedQuery, /select\s+q\.id,/i);
+  assert.match(rankedQuery, /row_number\(\)\s+over/i);
+  assert.doesNotMatch(rankedQuery, /question_play_history/i);
+  assert.doesNotMatch(rankedQuery, /select\s+count\(\*\)\s+from\s+public\.question_options/i);
+  assert.match(sql, /if\s+v_option_count\s*<>\s*4\s+or\s+v_correct_count\s*<>\s*1/i);
+  assert.match(sql, /if\s+v_position\s*<>\s*12/i);
 });
