@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Gamepad2, Trophy, Users, Clock, QrCode, CheckCircle2 } from "lucide-react";
+import { Gamepad2, Trophy, Users, Clock, QrCode, CheckCircle2, Sparkles } from "lucide-react";
 import QRCode from "qrcode";
 import { getGameTitle } from "@/lib/games/registry";
 import { assertPublicStateSafe, asMavelasRoomPhase } from "@/lib/games/state-boundaries";
@@ -108,6 +108,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [joinHost, setJoinHost] = useState("game-mavelas.vercel.app");
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
+  const [openingCountdown, setOpeningCountdown] = useState<{ roundId: string; seconds: number } | null>(null);
   const [heist, setHeist] = useState<PublicClueHeist | null>(null);
   const roomIdRef = useRef("");
   const endGameSignalRef = useRef<string | null | undefined>(undefined);
@@ -154,6 +155,26 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
     const interval = setInterval(updateTimer, 500);
     return () => clearInterval(interval);
   }, [room?.phase, round?.closes_at, round?.status, round?.position]);
+
+  useEffect(() => {
+    const roundId = round?.round_id;
+    if (!roundId || !round.opens_at || round.status !== "open" || room?.phase !== "playing") {
+      const resetTimer = window.setTimeout(() => setOpeningCountdown(null), 0);
+      return () => window.clearTimeout(resetTimer);
+    }
+
+    const targetTime = new Date(round.opens_at).getTime();
+    const updateTimer = () => {
+      setOpeningCountdown({
+        roundId,
+        seconds: Math.max(0, Math.ceil((targetTime - Date.now()) / 1000)),
+      });
+    };
+
+    updateTimer();
+    const interval = window.setInterval(updateTimer, 250);
+    return () => window.clearInterval(interval);
+  }, [room?.phase, round?.opens_at, round?.round_id, round?.status]);
 
   // Realtime room and round listeners
   useEffect(() => {
@@ -310,6 +331,10 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const isClueHeist = round?.game_mode === "guess_image";
   const isLogoQuiz = round?.game_mode === "logo_quiz";
   const isTriviaDash = room?.game_mode === "trivia_dash";
+  const secondsUntilOpen = round?.opens_at
+    ? openingCountdown && openingCountdown.roundId === round.round_id ? openingCountdown.seconds : 1
+    : null;
+  const isQuestionPreview = isTriviaDash && secondsUntilOpen !== null && secondsUntilOpen > 0;
   const flagDifficulty =
     round?.game_mode === "flag_frenzy" ? getFlagDifficulty(round.position, round.total_rounds) : null;
 
@@ -362,13 +387,15 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
             {!isLobby && !isResults && (
               <div
                 className={`flex items-center gap-2 rounded-2xl border px-5 py-3 font-mono text-2xl font-black transition-colors ${
-                  secondsRemaining !== null && secondsRemaining <= 5
+                  isQuestionPreview
+                    ? "border-[#39a7ff]/40 bg-[#39a7ff]/10 text-[#79c5ff]"
+                    : secondsRemaining !== null && secondsRemaining <= 5
                     ? "border-rose-500/40 bg-rose-500/10 text-rose-400 animate-pulse"
                     : "border-white/10 bg-white/[.05] text-[#d7ff3f]"
                 }`}
               >
-                <Clock size={22} />
-                <span>{secondsRemaining !== null ? `${secondsRemaining}s` : isRevealed ? "Revealed" : "Live"}</span>
+                {isQuestionPreview ? <Sparkles size={22} /> : <Clock size={22} />}
+                <span>{isQuestionPreview ? `Ready ${secondsUntilOpen}` : secondsRemaining !== null ? `${secondsRemaining}s` : isRevealed ? "Revealed" : "Live"}</span>
               </div>
             )}
             <div className="rounded-2xl border border-white/10 bg-white/[.05] px-5 py-3 text-right">
@@ -426,7 +453,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                       isRevealed ? "bg-[#d7ff3f] text-[#101314]" : "bg-white/10 text-white/70"
                     }`}
                   >
-                    {isRevealed ? "Revealed" : allAnswersIn ? "All answers in" : "Answering"}
+                    {isRevealed ? "Revealed" : isQuestionPreview ? "On screen first" : allAnswersIn ? "All answers in" : "Answering"}
                   </span>
                 )}
               </div>
@@ -582,7 +609,19 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               )}
 
               {/* Answering Progress Bar on big screen */}
-              {!isLobby && !isRevealed && !isWhoAmI && !isClueHeist && (
+              {isQuestionPreview && (
+                <div className="mt-6 max-w-xl rounded-2xl border border-[#39a7ff]/40 bg-[#39a7ff]/10 p-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[.16em] text-[#79c5ff]">Question on screen</p>
+                      <p className="mt-1 text-sm font-bold text-white/70">Players are looking up before their answer pads unlock.</p>
+                    </div>
+                    <span className="rounded-full bg-[#39a7ff] px-4 py-2 font-mono text-lg font-black text-[#101314]">{secondsUntilOpen}</span>
+                  </div>
+                </div>
+              )}
+
+              {!isQuestionPreview && !isLobby && !isRevealed && !isWhoAmI && !isClueHeist && (
                 <div className={`mt-6 max-w-xl rounded-2xl border p-5 ${allAnswersIn ? "border-[#d7ff3f]/50 bg-[#d7ff3f]/10" : "border-white/10 bg-white/[.04]"}`}>
                   <div className="flex items-center justify-between text-sm font-bold">
                     <span className="flex items-center gap-2 text-white/70">
