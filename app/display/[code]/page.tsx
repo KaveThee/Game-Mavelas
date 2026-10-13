@@ -342,6 +342,27 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const totalPlayers = room?.total_players ?? 0;
   const answeredCount = room?.answered_count ?? 0;
   const progressPercent = totalPlayers > 0 ? Math.min(100, Math.round((answeredCount / totalPlayers) * 100)) : 0;
+  const promptLength = round?.prompt?.length ?? 0;
+  const longestOptionLength = round?.options.reduce(
+    (longest, option) => Math.max(longest, option.text.length),
+    0,
+  ) ?? 0;
+  const questionTitleSize = promptLength > 220
+    ? "text-2xl sm:text-3xl lg:text-4xl"
+    : promptLength > 120
+      ? "text-3xl sm:text-4xl lg:text-5xl"
+      : promptLength > 80
+        ? "text-4xl sm:text-5xl lg:text-6xl"
+        : isTriviaDash
+          ? "text-4xl sm:text-5xl lg:text-5xl"
+          : "text-4xl sm:text-6xl lg:text-7xl";
+  const answerTextSize = longestOptionLength > 100
+    ? "text-xs sm:text-sm"
+    : longestOptionLength > 60
+      ? "text-sm sm:text-base"
+      : longestOptionLength > 36
+        ? "text-base sm:text-lg"
+        : "text-lg sm:text-2xl";
 
   return (
     <main className="h-dvh overflow-hidden bg-[#101314] px-4 py-4 text-white lg:px-8 lg:py-5">
@@ -465,12 +486,12 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                 )}
               </div>
 
-              <h1 className="mt-3 max-w-4xl whitespace-pre-line text-4xl font-black leading-[.94] tracking-[-.06em] sm:text-6xl lg:text-7xl">
+              <h1 className={`mt-3 max-w-4xl whitespace-pre-line font-black leading-[.94] tracking-[-.06em] ${questionTitleSize}`}>
                 {isLobby ? "THE TABLE\nIS GATHERING." : isClueHeist ? heist?.turn_phase === "steal" ? "STEAL\nTHE POINTS!" : `${(round?.active_player_name || "The player").toUpperCase()}\nIN THE SPOTLIGHT` : isWhoAmI ? `${(round?.active_player_name || "The guesser").toUpperCase()}\nIS UP!` : round?.prompt || "PLAY\nTOGETHER."}
               </h1>
 
               {isTriviaDash && !isLobby && (
-                <div className="mt-5 max-w-5xl rounded-[2rem] border border-white/15 bg-white/[.05] p-4 shadow-2xl">
+                <div className="mt-4 max-w-5xl rounded-[2rem] border border-white/15 bg-white/[.05] p-3 shadow-2xl">
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">24-space race board</p>
@@ -486,7 +507,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                       return (
                         <div
                           key={space}
-                          className={`relative flex aspect-square min-h-11 items-center justify-center rounded-xl border text-xs font-black ${
+                          className={`relative flex h-10 items-center justify-center rounded-xl border text-xs font-black sm:h-11 ${
                             occupants.length ? "border-[#d7ff3f] bg-[#d7ff3f] text-[#101314]" : "border-white/10 bg-black/20 text-white/30"
                           }`}
                         >
@@ -600,7 +621,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                         }`}>
                           {option.label}
                         </span>
-                        <span className="text-lg font-black leading-tight sm:text-2xl">{option.text}</span>
+                        <span className={`${answerTextSize} font-black leading-tight`}>{option.text}</span>
                       </div>
                     );
                   })}
@@ -609,7 +630,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
               {/* Reveal feedback on big screen */}
               {isRevealed && round?.correct_option && (
-                <div className="mt-5 max-w-2xl rounded-3xl border-2 border-[#d7ff3f] bg-[#d7ff3f]/15 p-5">
+                <div className="mt-4 max-w-2xl rounded-3xl border-2 border-[#d7ff3f] bg-[#d7ff3f]/15 p-4">
                   <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">Correct Answer</p>
                   <p className="mt-2 text-3xl font-black text-white">{round.correct_option}</p>
                   {round.explanation && (
