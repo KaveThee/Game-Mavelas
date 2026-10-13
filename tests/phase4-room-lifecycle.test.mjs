@@ -75,10 +75,11 @@ test("controller logo is inert in room views while display logo returns home", (
   assert.match(display, /onClick=\{\(\) => window\.location\.assign\("\/"\)\}/);
 });
 
-test("display returns home for an ended lobby on initial load or a new host signal", () => {
+test("active display returns home on a new signal while a reopened display joins the lobby", () => {
   assert.match(migration, /'end_game_signal', r\.state ->> 'end_game_signal'/i);
   assert.match(display, /endGameSignalRef = useRef<string \| null \| undefined>\(undefined\)/);
-  assert.match(display, /endGameSignalRef\.current === undefined/);
+  assert.match(display, /endGameSignalRef\.current !== undefined/);
   assert.match(display, /nextEndGameSignal !== endGameSignalRef\.current/);
   assert.match(display, /nextRoom\.status === "lobby"/);
+  assert.match(display, /freshly opened display adopts the latest signal as its baseline/i);
 });
