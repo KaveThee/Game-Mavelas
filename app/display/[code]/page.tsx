@@ -344,7 +344,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const progressPercent = totalPlayers > 0 ? Math.min(100, Math.round((answeredCount / totalPlayers) * 100)) : 0;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#101314] px-4 py-4 text-white lg:px-8 lg:py-6">
+    <main className="h-dvh overflow-hidden bg-[#101314] px-4 py-4 text-white lg:px-8 lg:py-5">
       {allAnswersIn && (
         <div className="fixed inset-0 z-50 grid place-items-center overflow-hidden bg-[#101314] px-6 text-center">
           <div className="absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-[#d7ff3f]/10 blur-3xl" />
@@ -366,9 +366,12 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
           <p className="absolute bottom-7 font-mono text-sm font-black uppercase tracking-[.2em] text-white/35">Room {code} · Reveal incoming</p>
         </div>
       )}
-      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1600px] flex-col">
+      <div
+        data-testid="display-shell"
+        className="mx-auto flex h-full min-h-0 max-w-[1600px] flex-col"
+      >
         {/* Header */}
-        <header className="flex items-center justify-between">
+        <header className="flex shrink-0 items-center justify-between">
           <button
             type="button"
             className="flex items-center gap-4 text-left"
@@ -408,13 +411,13 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
         {/* Results Screen */}
         {isResults ? (
-          <section className="my-auto py-12 text-center">
+          <section className="my-auto min-h-0 overflow-hidden py-8 text-center">
             <Trophy className="mx-auto text-[#d7ff3f]" size={72} />
             <p className="mt-6 text-sm font-black uppercase tracking-[.16em] text-[#d7ff3f]">Final Standings</p>
             <h1 className="mt-2 text-6xl font-black tracking-[-0.06em] sm:text-7xl">Game Over!</h1>
             <p className="mt-4 text-xl text-white/60">The scores are locked. Here is tonight’s champion:</p>
 
-            <div className="mx-auto mt-10 max-w-2xl rounded-[2.5rem] bg-[#f0eee8] p-8 text-[#101314] shadow-2xl">
+            <div className="mx-auto mt-8 max-w-2xl rounded-[2.5rem] bg-[#f0eee8] p-7 text-[#101314] shadow-2xl">
               {room?.players.slice(0, 5).map((player, index) => (
                 <div
                   key={player.name + index}
@@ -438,8 +441,11 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
           </section>
         ) : (
           /* Active Game or Lobby Screen */
-          <section className="flex-1 grid min-h-0 items-center gap-6 py-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <div>
+          <section
+            data-testid="display-stage"
+            className="grid min-h-0 flex-1 items-center gap-5 overflow-hidden py-4 lg:grid-cols-[minmax(0,1fr)_360px]"
+          >
+            <div className="min-h-0">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-black uppercase tracking-[.16em] text-[#d7ff3f]">
                   {isLobby
@@ -459,12 +465,12 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                 )}
               </div>
 
-              <h1 className="mt-4 max-w-4xl whitespace-pre-line text-4xl font-black leading-[.94] tracking-[-.06em] sm:text-6xl lg:text-7xl">
+              <h1 className="mt-3 max-w-4xl whitespace-pre-line text-4xl font-black leading-[.94] tracking-[-.06em] sm:text-6xl lg:text-7xl">
                 {isLobby ? "THE TABLE\nIS GATHERING." : isClueHeist ? heist?.turn_phase === "steal" ? "STEAL\nTHE POINTS!" : `${(round?.active_player_name || "The player").toUpperCase()}\nIN THE SPOTLIGHT` : isWhoAmI ? `${(round?.active_player_name || "The guesser").toUpperCase()}\nIS UP!` : round?.prompt || "PLAY\nTOGETHER."}
               </h1>
 
               {isTriviaDash && !isLobby && (
-                <div className="mt-7 max-w-5xl rounded-[2rem] border border-white/15 bg-white/[.05] p-5 shadow-2xl">
+                <div className="mt-5 max-w-5xl rounded-[2rem] border border-white/15 bg-white/[.05] p-4 shadow-2xl">
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">24-space race board</p>
@@ -474,7 +480,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                       Round {round?.position ?? 0}/12
                     </span>
                   </div>
-                  <div className="mt-5 grid grid-cols-8 gap-1.5 sm:grid-cols-12">
+                  <div className="mt-4 grid grid-cols-8 gap-1.5 sm:grid-cols-12">
                     {Array.from({ length: 24 }, (_, index) => index + 1).map((space) => {
                       const occupants = room?.players.filter((player) => player.position === space) ?? [];
                       return (
@@ -504,7 +510,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               )}
 
               {isClueHeist && heist && heist.turn_phase !== "revealed" && (
-                <div className="mt-8 max-w-4xl space-y-4">
+                <div className="mt-5 max-w-4xl space-y-3">
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="rounded-full bg-[#d7ff3f] px-4 py-2 font-mono text-xl font-black text-[#101314]">{heist.current_value} PTS</span>
                     <span className="rounded-full border border-white/15 bg-white/[.06] px-4 py-2 text-sm font-black uppercase tracking-wider">Clue {heist.clue_number} / 20</span>
@@ -512,7 +518,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {heist.clues.slice(-4).map((clue) => (
-                      <div key={clue.position} className="rounded-3xl border border-white/15 bg-white/[.07] p-5">
+                      <div key={clue.position} className="rounded-3xl border border-white/15 bg-white/[.07] p-4">
                         <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">Clue {clue.position}</p>
                         <p className="mt-2 text-xl font-black leading-tight sm:text-2xl">{clue.text}</p>
                       </div>
@@ -522,7 +528,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               )}
 
               {isClueHeist && heist?.turn_phase === "revealed" && (
-                <div className="mt-8 grid max-w-4xl gap-6 sm:grid-cols-[.75fr_1.25fr] sm:items-center">
+                <div className="mt-5 grid max-w-4xl gap-5 sm:grid-cols-[.75fr_1.25fr] sm:items-center">
                   {heist.image && <Image src={heist.image.url} alt={heist.image.alt} width={1200} height={900} className="aspect-[4/3] w-full rounded-[2rem] bg-white object-contain shadow-2xl" />}
                   <div>
                     <p className="text-sm font-black uppercase tracking-[.16em] text-[#d7ff3f]">Mystery revealed</p>
@@ -534,7 +540,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               )}
 
               {isWhoAmI && !isRevealed && (
-                <div className="mt-8 max-w-3xl rounded-[2rem] border border-white/15 bg-white/[.06] p-6 sm:p-8">
+                <div className="mt-5 max-w-3xl rounded-[2rem] border border-white/15 bg-white/[.06] p-5 sm:p-6">
                   <p className="text-sm font-black uppercase tracking-[.16em] text-[#d7ff3f]">Who Am I?</p>
                   <p className="mt-3 text-2xl font-black leading-tight sm:text-4xl">{round?.active_player_name || "The active player"}, ask the table yes-or-no questions.</p>
                   <p className="mt-3 text-base font-bold leading-6 text-white/60">Everyone else: keep the identity secret, answer fairly, and help with clues. The guesser submits their final answer on their phone.</p>
@@ -543,24 +549,24 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
               {/* Media for Flag Frenzy */}
               {round?.media?.type === "flag" && (
-                <div className="mt-8 flex items-center justify-start">
+                <div className="mt-5 flex items-center justify-start">
                   <Image
                     src={round.media.url}
                     alt={round.media.alt}
                     width={960}
                     height={640}
                     unoptimized
-                    className="h-56 w-auto max-w-full rounded-3xl border-4 border-white/10 bg-white object-contain p-4 shadow-2xl sm:h-64"
+                    className="h-48 w-auto max-w-full rounded-3xl border-4 border-white/10 bg-white object-contain p-4 shadow-2xl sm:h-56 lg:h-60"
                   />
                 </div>
               )}
 
               {/* Logo Rush keeps a generous white clear-space around each mark. */}
               {isLogoQuiz && round?.media?.type === "logo" && (
-                <div className="mt-6 flex max-w-4xl items-center justify-start">
+                <div className="mt-5 flex max-w-4xl items-center justify-start">
                   <div
                     data-testid="logo-rush-media-frame"
-                    className="relative h-48 w-full max-w-2xl overflow-hidden rounded-[2rem] border-4 border-white/10 bg-white shadow-2xl sm:h-56 lg:h-64"
+                    className="relative h-44 w-full max-w-2xl overflow-hidden rounded-[2rem] border-4 border-white/10 bg-white shadow-2xl sm:h-52 lg:h-56"
                   >
                     <Image
                       src={round.media.url}
@@ -577,13 +583,13 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               {/* The TV is the source of truth for answer wording. Controllers
                   receive only matching A/B/C/D pads, keeping attention at the table. */}
               {!isLobby && !isWhoAmI && !isClueHeist && round && round.options.length > 0 && (
-                <div className="mt-8 grid max-w-4xl grid-cols-2 gap-3 sm:gap-4">
+                <div className="mt-5 grid max-w-4xl grid-cols-2 gap-3">
                   {round.options.map((option) => {
                     const isCorrect = isRevealed && option.is_correct;
                     return (
                       <div
                         key={option.label}
-                        className={`flex min-h-24 items-center gap-4 rounded-3xl border-2 px-5 py-4 sm:min-h-28 sm:px-7 ${
+                        className={`flex min-h-20 items-center gap-4 rounded-3xl border-2 px-5 py-3 sm:min-h-24 sm:px-6 ${
                           isCorrect
                             ? "border-[#d7ff3f] bg-[#d7ff3f] text-[#101314]"
                             : "border-white/15 bg-white/[.07] text-white"
@@ -603,7 +609,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
               {/* Reveal feedback on big screen */}
               {isRevealed && round?.correct_option && (
-                <div className="mt-8 rounded-3xl border-2 border-[#d7ff3f] bg-[#d7ff3f]/15 p-6 max-w-2xl">
+                <div className="mt-5 max-w-2xl rounded-3xl border-2 border-[#d7ff3f] bg-[#d7ff3f]/15 p-5">
                   <p className="text-xs font-black uppercase tracking-[.16em] text-[#d7ff3f]">Correct Answer</p>
                   <p className="mt-2 text-3xl font-black text-white">{round.correct_option}</p>
                   {round.explanation && (
@@ -614,7 +620,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
               {/* Answering Progress Bar on big screen */}
               {isQuestionPreview && (
-                <div className="mt-6 max-w-xl rounded-2xl border border-[#39a7ff]/40 bg-[#39a7ff]/10 p-5">
+                <div className="mt-4 max-w-xl rounded-2xl border border-[#39a7ff]/40 bg-[#39a7ff]/10 p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-xs font-black uppercase tracking-[.16em] text-[#79c5ff]">Question on screen</p>
@@ -626,7 +632,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               )}
 
               {!isQuestionPreview && !isLobby && !isRevealed && !isWhoAmI && !isClueHeist && (
-                <div className={`mt-6 max-w-xl rounded-2xl border p-5 ${allAnswersIn ? "border-[#d7ff3f]/50 bg-[#d7ff3f]/10" : "border-white/10 bg-white/[.04]"}`}>
+                <div className={`mt-4 max-w-xl rounded-2xl border p-4 ${allAnswersIn ? "border-[#d7ff3f]/50 bg-[#d7ff3f]/10" : "border-white/10 bg-white/[.04]"}`}>
                   <div className="flex items-center justify-between text-sm font-bold">
                     <span className="flex items-center gap-2 text-white/70">
                       <Users size={16} /> Players Answered
@@ -646,7 +652,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
               {/* Lobby QR Code Card */}
               {isLobby && (
-                <div className="mt-8 flex max-w-3xl flex-wrap items-center gap-7 rounded-[2rem] border border-[#d7ff3f]/30 bg-white/[.06] p-6 shadow-2xl sm:p-8">
+                <div className="mt-6 flex max-w-3xl flex-wrap items-center gap-6 rounded-[2rem] border border-[#d7ff3f]/30 bg-white/[.06] p-6 shadow-2xl">
                   {qrDataUrl ? (
                     <Image
                       src={qrDataUrl}
@@ -675,7 +681,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
             </div>
 
             {/* Sidebar Leaderboard */}
-            <aside className="max-h-[calc(100vh-170px)] overflow-hidden rounded-[2rem] bg-[#f0eee8] p-5 text-[#101314] shadow-2xl">
+            <aside className="max-h-full overflow-hidden rounded-[2rem] bg-[#f0eee8] p-5 text-[#101314] shadow-2xl">
               <div className="flex items-center justify-between border-b border-black/10 pb-5">
                 <div className="flex items-center gap-3">
                   <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#101314] text-[#d7ff3f]">
@@ -693,7 +699,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
                 </span>
               </div>
 
-              <div className="mt-4 space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
+              <div className="mt-4 max-h-[calc(100dvh-285px)] space-y-2 overflow-y-auto pr-1">
                 {room?.players.length ? (
                   room.players.map((player, index) => (
                     <div
@@ -735,7 +741,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
         )}
 
         {/* Footer */}
-        <footer className="flex items-center justify-between border-t border-white/10 pt-6 text-sm font-bold text-white/45">
+        <footer className="flex shrink-0 items-center justify-between border-t border-white/10 pt-4 text-sm font-bold text-white/45">
           <span className="flex items-center gap-2">
             <Gamepad2 size={18} /> Keep your phone open
           </span>
