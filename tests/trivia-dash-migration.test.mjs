@@ -25,6 +25,13 @@ async function loadTriviaDashStartPerformanceMigration() {
   return readFile(new URL(filename, migrationDirectory), "utf8");
 }
 
+async function loadTriviaDashDisplayFirstMigration() {
+  const files = await readdir(migrationDirectory);
+  const filename = files.find((file) => file.endsWith("_trivia_dash_display_first_sync.sql"));
+  assert.ok(filename, "Trivia Dash display-first migration is missing");
+  return readFile(new URL(filename, migrationDirectory), "utf8");
+}
+
 test("Trivia Dash migration is additive and leaves Classic RPC definitions untouched", async () => {
   const sql = await loadTriviaDashMigration();
 
@@ -94,4 +101,26 @@ test("Trivia Dash start ranks narrow ids and validates only selected questions",
   assert.doesNotMatch(rankedQuery, /select\s+count\(\*\)\s+from\s+public\.question_options/i);
   assert.match(sql, /if\s+v_option_count\s*<>\s*4\s+or\s+v_correct_count\s*<>\s*1/i);
   assert.match(sql, /if\s+v_position\s*<>\s*12/i);
+});
+
+test("Trivia Dash gives the display a server-authoritative lead on every round", async () => {
+  const sql = await loadTriviaDashDisplayFirstMigration();
+  const controller = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const display = await readFile(new URL("../app/display/[code]/page.tsx", import.meta.url), "utf8");
+
+  assert.match(sql, /alter function public\.start_trivia_dash\(uuid\) set schema private/i);
+  assert.match(sql, /private\.start_trivia_dash_immediate\(p_room_id\)/i);
+  assert.match(sql, /clock_timestamp\(\) \+ interval '4 seconds'/i);
+  assert.match(sql, /v_closes_at := v_opens_at \+ interval '25 seconds'/i);
+  assert.match(sql, /set round_ends_at = v_closes_at/i);
+  assert.match(sql, /alter function public\.advance_trivia_dash_round\(uuid\) set schema private/i);
+  assert.match(sql, /private\.advance_trivia_dash_round_immediate\(p_room_id\)/i);
+  assert.match(sql, /alter function public\.submit_trivia_dash_answer\(uuid, uuid\) set schema private/i);
+  assert.match(sql, /clock_timestamp\(\) < v_opens_at/i);
+  assert.match(sql, /revoke all on function private\.start_trivia_dash_immediate\(uuid\) from public, anon, authenticated/i);
+  assert.match(sql, /grant execute on function public\.submit_trivia_dash_answer\(uuid, uuid\) to authenticated/i);
+  assert.match(controller, /isPreparingQuestion = isTriviaDash && secondsUntilOpen !== null && secondsUntilOpen > 0/);
+  assert.match(controller, /Display gets the question first/);
+  assert.match(display, /isQuestionPreview = isTriviaDash && secondsUntilOpen !== null && secondsUntilOpen > 0/);
+  assert.match(display, /Players are looking up before their answer pads unlock/);
 });

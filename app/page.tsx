@@ -185,14 +185,19 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
+  const [openingCountdown, setOpeningCountdown] = useState<{ roundId: string; seconds: number } | null>(null);
   const [isRestoringHost, setIsRestoringHost] = useState(Boolean(hostCode));
 
   const room = useMemo(() => serverState?.room_code || roomCode || "MAV1", [serverState?.room_code, roomCode]);
   const chosenGame = findPlayableGame(selectedGame) ?? playableGames[0];
   const livePhase = serverState?.phase;
   const liveRoundId = serverState?.current_question?.round_id;
+  const liveRoundOpensAt = serverState?.current_question?.opens_at;
   const liveRoundClosesAt = serverState?.current_question?.closes_at;
   const liveRoundPosition = serverState?.current_question?.position;
+  const secondsUntilOpen = liveRoundOpensAt
+    ? openingCountdown && openingCountdown.roundId === liveRoundId ? openingCountdown.seconds : 1
+    : null;
 
   const openEntryScreen = (nextScreen: "create" | "join") => {
     setConnectionError("");
@@ -447,6 +452,27 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     return () => clearInterval(interval);
   }, [liveRoundClosesAt, livePhase, liveRoundPosition]);
 
+  // Keep the TV four seconds ahead of Trivia Dash controllers. The countdown
+  // is paired with its round so a new round never inherits an old unlocked UI.
+  useEffect(() => {
+    if (!liveRoundId || !liveRoundOpensAt || livePhase !== "playing") {
+      const resetTimer = window.setTimeout(() => setOpeningCountdown(null), 0);
+      return () => window.clearTimeout(resetTimer);
+    }
+
+    const targetTime = new Date(liveRoundOpensAt).getTime();
+    const updateTimer = () => {
+      setOpeningCountdown({
+        roundId: liveRoundId,
+        seconds: Math.max(0, Math.ceil((targetTime - Date.now()) / 1000)),
+      });
+    };
+
+    updateTimer();
+    const interval = window.setInterval(updateTimer, 250);
+    return () => window.clearInterval(interval);
+  }, [livePhase, liveRoundId, liveRoundOpensAt]);
+
   async function createLiveRoom() {
     setConnectionError("");
     setIsConnecting(true);
@@ -581,6 +607,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
   async function handleSubmitAnswer(optionId: string) {
     if (!supabase || !serverState?.current_question?.round_id || isSubmitting) return;
+    if (serverState.current_question.game_mode === "trivia_dash" && secondsUntilOpen !== null && secondsUntilOpen > 0) return;
 
     setConnectionError("");
     setIsSubmitting(true);
@@ -768,6 +795,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
       <GameScreen
         state={serverState}
         secondsRemaining={secondsRemaining}
+        secondsUntilOpen={secondsUntilOpen}
         isSubmitting={isSubmitting}
         error={connectionError}
         onAnswer={handleSubmitAnswer}
@@ -1268,6 +1296,7 @@ function Lobby({
 function GameScreen({
   state,
   secondsRemaining,
+  secondsUntilOpen,
   isSubmitting,
   error,
   onAnswer,
@@ -1280,6 +1309,7 @@ function GameScreen({
 }: {
   state: ServerGameState;
   secondsRemaining: number | null;
+  secondsUntilOpen: number | null;
   isSubmitting: boolean;
   error: string;
   onAnswer: (optionId: string) => void;
@@ -1298,6 +1328,7 @@ function GameScreen({
   const isWhoAmI = question?.game_mode === "who_am_i";
   const isClueHeist = question?.game_mode === "guess_image";
   const isTriviaDash = question?.game_mode === "trivia_dash";
+  const isPreparingQuestion = isTriviaDash && secondsUntilOpen !== null && secondsUntilOpen > 0;
   const heist = state.clue_heist;
   const [guess, setGuess] = useState("");
   const [clueDraft, setClueDraft] = useState("");
@@ -1364,7 +1395,12 @@ function GameScreen({
           </div>
 
           <div className="flex items-center gap-3">
-            {secondsRemaining !== null && !isRevealed && (
+            {isPreparingQuestion ? (
+              <div className="flex items-center gap-1.5 rounded-xl bg-[#39a7ff]/15 px-3 py-1.5 font-mono text-sm font-black text-[#79c5ff]">
+                <Sparkles size={16} />
+                <span>Ready in {secondsUntilOpen}s</span>
+              </div>
+            ) : secondsRemaining !== null && !isRevealed ? (
               <div
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-mono text-lg font-black ${
                   secondsRemaining <= 5 ? "bg-rose-500/20 text-rose-400 animate-pulse" : "bg-white/10 text-[#d7ff3f]"
@@ -1373,7 +1409,7 @@ function GameScreen({
                 <Clock size={16} />
                 <span>{secondsRemaining}s</span>
               </div>
-            )}
+            ) : null}
             <span className="rounded-xl border border-white/15 bg-white/[.06] px-3 py-1 font-mono text-xs font-bold text-white/80">
               {state.room_code}
             </span>
@@ -1406,12 +1442,18 @@ function GameScreen({
           {question ? (
             <div className="rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-9 shadow-2xl">
               <p className="text-xs font-black uppercase tracking-[.16em] text-black/45">
-                {isRevealed ? "Answer Revealed" : isClueHeist ? `Clue ${heist?.clue_number || 1} of 20 · ${heist?.current_value || 100} points` : isWhoAmI ? "Conversation Round" : "Phone Controller"}
+                {isPreparingQuestion ? "Shared screen preview" : isRevealed ? "Answer Revealed" : isClueHeist ? `Clue ${heist?.clue_number || 1} of 20 · ${heist?.current_value || 100} points` : isWhoAmI ? "Conversation Round" : "Phone Controller"}
               </p>
               <h1 className="mt-2 text-3xl font-black leading-tight tracking-[-.06em] sm:text-4xl">
-                {isRevealed ? "Round complete." : isClueHeist ? heist?.turn_phase === "steal" ? "The heist is open!" : heist?.is_spotlight ? "You are in the spotlight." : `${question?.active_player_name || "A player"} has priority.` : isWhoAmI ? question?.is_active_player ? "You are the guesser." : `${question?.active_player_name || "A player"} is the guesser.` : "Look at the shared screen."}
+                {isPreparingQuestion ? "Eyes on the shared screen." : isRevealed ? "Round complete." : isClueHeist ? heist?.turn_phase === "steal" ? "The heist is open!" : heist?.is_spotlight ? "You are in the spotlight." : `${question?.active_player_name || "A player"} has priority.` : isWhoAmI ? question?.is_active_player ? "You are the guesser." : `${question?.active_player_name || "A player"} is the guesser.` : "Look at the shared screen."}
               </h1>
-              {!isRevealed && !isWhoAmI && !isClueHeist && <p className="mt-2 text-sm font-bold text-black/55">Tap the letter that matches the answer on TV.</p>}
+              {!isRevealed && !isWhoAmI && !isClueHeist && (
+                <p className="mt-2 text-sm font-bold text-black/55">
+                  {isPreparingQuestion
+                    ? `Answer pads unlock in ${secondsUntilOpen}s, after everyone sees the question.`
+                    : "Tap the letter that matches the answer on TV."}
+                </p>
+              )}
 
               {isTriviaDash && (
                 <div className="mt-6 rounded-2xl bg-black/[.06] p-4">
@@ -1542,7 +1584,13 @@ function GameScreen({
                 )
               )}
               {/* Options Grid */}
-              {!isWhoAmI && !isClueHeist && <div className="mt-7 grid grid-cols-2 gap-3">
+              {isPreparingQuestion && (
+                <div className="mt-7 rounded-2xl border-2 border-[#101314] bg-[#39a7ff]/15 p-5 text-center shadow-[0_6px_0_#101314]">
+                  <p className="text-xs font-black uppercase tracking-[.16em] text-black/50">Display gets the question first</p>
+                  <p className="mt-2 text-3xl font-black">Get ready · {secondsUntilOpen}</p>
+                </div>
+              )}
+              {!isPreparingQuestion && !isWhoAmI && !isClueHeist && <div className="mt-7 grid grid-cols-2 gap-3">
                 {question.options.map((option, index) => {
                   const optionLetter = String.fromCharCode(65 + index);
                   const isSelected = myAnswer.selected_option_id === option.id;
