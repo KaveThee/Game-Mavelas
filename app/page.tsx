@@ -1328,7 +1328,8 @@ function GameScreen({
   const isWhoAmI = question?.game_mode === "who_am_i";
   const isClueHeist = question?.game_mode === "guess_image";
   const isTriviaDash = question?.game_mode === "trivia_dash";
-  const isPreparingQuestion = isTriviaDash && secondsUntilOpen !== null && secondsUntilOpen > 0;
+  const isPreparingQuestion =
+    isTriviaDash && state.phase === "playing" && secondsUntilOpen !== null && secondsUntilOpen > 0;
   const heist = state.clue_heist;
   const [guess, setGuess] = useState("");
   const [clueDraft, setClueDraft] = useState("");
