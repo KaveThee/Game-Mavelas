@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Gamepad2, Trophy, Users, Clock, QrCode, CheckCircle2, Sparkles } from "lucide-react";
 import QRCode from "qrcode";
 import { getGameTitle } from "@/lib/games/registry";
+import { GAME_TIMING, hasDisplayFirstLead } from "@/lib/games/timing";
 import { assertPublicStateSafe, asMavelasRoomPhase } from "@/lib/games/state-boundaries";
 import { ensureGameIdentity, supabase } from "@/lib/supabase";
 
@@ -152,7 +153,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
     };
 
     updateTimer();
-    const interval = setInterval(updateTimer, 500);
+    const interval = setInterval(updateTimer, GAME_TIMING.countdownTickMs);
     return () => clearInterval(interval);
   }, [room?.phase, round?.closes_at, round?.status, round?.position]);
 
@@ -172,7 +173,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
     };
 
     updateTimer();
-    const interval = window.setInterval(updateTimer, 250);
+    const interval = window.setInterval(updateTimer, GAME_TIMING.countdownTickMs);
     return () => window.clearInterval(interval);
   }, [room?.phase, round?.opens_at, round?.round_id, round?.status]);
 
@@ -231,7 +232,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
             position: dash.current_round,
             total_rounds: dash.total_rounds,
             game_mode: "trivia_dash",
-            duration_seconds: 25,
+            duration_seconds: GAME_TIMING.triviaDashAnswerSeconds,
           } : null;
         }
 
@@ -276,7 +277,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
     // to keep the projector synchronized without reopening table visibility.
     const pollInterval = window.setInterval(() => {
       void load();
-    }, 1000);
+    }, GAME_TIMING.displayPollMs);
 
     const channel = client
       .channel("display-" + code)
@@ -306,7 +307,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
     const timer = window.setTimeout(() => {
       void client.rpc("auto_reveal_round", { p_room_id: roomIdRef.current });
-    }, room.phase === "all_answered" ? 3100 : 250);
+    }, room.phase === "all_answered" ? GAME_TIMING.allAnswersHoldMs : GAME_TIMING.countdownTickMs);
 
     return () => window.clearTimeout(timer);
   }, [room?.game_mode, room?.phase, room?.state_version, secondsRemaining]);
@@ -317,7 +318,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
     const timer = window.setTimeout(() => {
       void client.rpc("auto_advance_round", { p_room_id: roomIdRef.current });
-    }, 6200);
+    }, GAME_TIMING.revealHoldMs);
 
     return () => window.clearTimeout(timer);
   }, [room?.game_mode, room?.phase, room?.state_version]);
@@ -335,7 +336,11 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
     ? openingCountdown && openingCountdown.roundId === round.round_id ? openingCountdown.seconds : 1
     : null;
   const isQuestionPreview =
-    isTriviaDash && room?.phase === "playing" && round?.status === "open" && secondsUntilOpen !== null && secondsUntilOpen > 0;
+    hasDisplayFirstLead(round?.game_mode)
+    && room?.phase === "playing"
+    && round?.status === "open"
+    && secondsUntilOpen !== null
+    && secondsUntilOpen > 0;
   const flagDifficulty =
     round?.game_mode === "flag_frenzy" ? getFlagDifficulty(round.position, round.total_rounds) : null;
 
@@ -466,7 +471,10 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
             data-testid="display-stage"
             className="grid min-h-0 flex-1 items-center gap-5 overflow-hidden py-4 lg:grid-cols-[minmax(0,1fr)_360px]"
           >
-            <div className="min-h-0">
+            <div
+              key={`${round?.round_id ?? room?.state_version ?? "lobby"}-${room?.phase ?? "lobby"}`}
+              className="phase-enter min-h-0"
+            >
               <div className="flex items-center gap-3">
                 <span className="text-sm font-black uppercase tracking-[.16em] text-[#d7ff3f]">
                   {isLobby

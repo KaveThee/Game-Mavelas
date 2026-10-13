@@ -70,7 +70,7 @@ export const classicGames: GameDefinition[] = [
   {
     id: "flags",
     title: "Flag Frenzy",
-    kicker: "Fastest finger wins",
+    kicker: "Quick instincts",
     icon: "map",
     color: "yellow",
     template: "flag_frenzy_africa",
@@ -80,7 +80,7 @@ export const classicGames: GameDefinition[] = [
     availability: "live",
     description: "Spot the country from its flag before the countdown runs down.",
     meta: "15, 30, 45 or 60 flags · 30 seconds each",
-    instructions: "A flag will display on the screen. Tap the matching country name as fast as you can to score points!",
+    instructions: "A flag appears on the shared screen. Match it on your phone before time runs out; harder flags are worth more.",
   },
   {
     id: "who",
