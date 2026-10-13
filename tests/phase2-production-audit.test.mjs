@@ -3,21 +3,21 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const migration = readFileSync(
-  new URL("../supabase/migrations/20261012171831_fix_lobby_state_and_phase2_audit.sql", import.meta.url),
+  new URL("../supabase/migrations/20261012172056_fix_lobby_state_and_phase2_audit.sql", import.meta.url),
   "utf8",
 );
 const controller = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
 const display = readFileSync(new URL("../app/display/[code]/page.tsx", import.meta.url), "utf8");
 const spectatorMigration = readFileSync(
-  new URL("../supabase/migrations/20261013061345_exclude_spectators_from_active_turns.sql", import.meta.url),
+  new URL("../supabase/migrations/20261013062304_exclude_spectators_from_active_turns.sql", import.meta.url),
   "utf8",
 );
 const spectatorStateMigration = readFileSync(
-  new URL("../supabase/migrations/20261013063001_filter_spectators_from_player_state.sql", import.meta.url),
+  new URL("../supabase/migrations/20261013063137_filter_spectators_from_player_state.sql", import.meta.url),
   "utf8",
 );
 const performanceMigration = readFileSync(
-  new URL("../supabase/migrations/20261013073202_phase2_foreign_key_indexes.sql", import.meta.url),
+  new URL("../supabase/migrations/20261013073235_phase2_foreign_key_indexes.sql", import.meta.url),
   "utf8",
 );
 
