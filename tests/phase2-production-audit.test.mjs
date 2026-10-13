@@ -34,6 +34,12 @@ test("entry navigation clears stale reconnect warnings", () => {
   assert.doesNotMatch(controller, /Phase 3 Live/);
 });
 
+test("host links show a restore state instead of flashing the public home page", () => {
+  assert.match(controller, /isRestoringHost/);
+  assert.match(controller, /Restoring your room/);
+  assert.match(controller, /finally[\s\S]*setIsRestoringHost\(false\)/);
+});
+
 test("display QR completion updates related state in one async callback", () => {
   assert.match(display, /\.then\(\(dataUrl\) => \{[\s\S]*setJoinHost\(currentHost\)[\s\S]*setQrDataUrl\(dataUrl\)/);
 });

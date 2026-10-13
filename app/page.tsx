@@ -185,6 +185,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
+  const [isRestoringHost, setIsRestoringHost] = useState(Boolean(hostCode));
 
   const room = useMemo(() => serverState?.room_code || roomCode || "MAV1", [serverState?.room_code, roomCode]);
   const chosenGame = findPlayableGame(selectedGame) ?? playableGames[0];
@@ -305,6 +306,8 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
           setConnectionError(err instanceof Error ? err.message : "Could not restore the host controller.");
           setScreen("host-denied");
         }
+      } finally {
+        if (!cancelled) setIsRestoringHost(false);
       }
     };
 
@@ -719,6 +722,18 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setLiveRoomId("");
     setServerState(null);
     setScreen("home");
+  }
+
+  if (isRestoringHost) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#101314] px-5 text-white">
+        <section className="text-center" aria-live="polite">
+          <span className="eyebrow">Host console</span>
+          <h1 className="mt-3 text-4xl font-black tracking-[-.06em]">Restoring your room…</h1>
+          <p className="mt-3 text-white/55">Checking host access and syncing the latest game state.</p>
+        </section>
+      </main>
+    );
   }
 
   if (screen === "host-denied") {
