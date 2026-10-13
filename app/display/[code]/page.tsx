@@ -215,17 +215,19 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
         }
 
         const nextEndGameSignal = nextRoom.end_game_signal ?? null;
-        if (endGameSignalRef.current === undefined) {
-          endGameSignalRef.current = nextEndGameSignal;
-        } else if (
+        if (
           nextEndGameSignal
-          && nextEndGameSignal !== endGameSignalRef.current
           && nextRoom.status === "lobby"
+          && (
+            endGameSignalRef.current === undefined
+            || nextEndGameSignal !== endGameSignalRef.current
+          )
         ) {
           endGameSignalRef.current = nextEndGameSignal;
           window.location.assign("/");
           return;
         }
+        endGameSignalRef.current = nextEndGameSignal;
 
         assertPublicStateSafe(nextRoom, publicPhase);
         assertPublicStateSafe(nextRound, publicPhase);

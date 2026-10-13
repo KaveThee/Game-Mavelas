@@ -64,6 +64,7 @@ test("controller surfaces call lifecycle RPCs and gate End Game to the host", ()
   assert.match(controller, /supabase\.rpc\("host_end_game"/);
   assert.match(controller, /onEndGame=\{serverState\.is_host \? handleEndGame : undefined\}/);
   assert.match(controller, /Host controls will pass to the next player/);
+  assert.match(controller, /The room will close because no players remain/);
   assert.match(controller, /End Game · Return Everyone to Lobby/);
 });
 
@@ -74,9 +75,10 @@ test("controller logo is inert in room views while display logo returns home", (
   assert.match(display, /onClick=\{\(\) => window\.location\.assign\("\/"\)\}/);
 });
 
-test("display reacts only to a new host end-game signal", () => {
+test("display returns home for an ended lobby on initial load or a new host signal", () => {
   assert.match(migration, /'end_game_signal', r\.state ->> 'end_game_signal'/i);
   assert.match(display, /endGameSignalRef = useRef<string \| null \| undefined>\(undefined\)/);
+  assert.match(display, /endGameSignalRef\.current === undefined/);
   assert.match(display, /nextEndGameSignal !== endGameSignalRef\.current/);
   assert.match(display, /nextRoom\.status === "lobby"/);
 });
