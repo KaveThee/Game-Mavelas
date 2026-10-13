@@ -37,6 +37,7 @@ import {
   triviaBranches,
 } from "@/lib/games/registry";
 import { isGameEnabled } from "@/lib/games/feature-flags";
+import { GAME_TIMING, hasDisplayFirstLead } from "@/lib/games/timing";
 import type { GameIconKey, GameDefinition } from "@/lib/games/types";
 import { ensureGameIdentity, supabase } from "@/lib/supabase";
 
@@ -183,6 +184,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   const [hostName, setHostName] = useState("");
   const [serverState, setServerState] = useState<ServerGameState | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSelectingGame, setIsSelectingGame] = useState(false);
   const [copied, setCopied] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [openingCountdown, setOpeningCountdown] = useState<{ roundId: string; seconds: number } | null>(null);
@@ -379,7 +381,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
     const recoveryPoll = window.setInterval(() => {
       void refreshGameState();
-    }, 4000);
+    }, GAME_TIMING.controllerRecoveryPollMs);
 
     const handleOnline = () => void refreshGameState();
     const handleOffline = () => setConnectionError("Connection interrupted. Reconnecting…");
@@ -410,7 +412,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
       void client
         .rpc(revealRpc, { p_room_id: liveRoomId })
         .then(() => refreshGameState());
-    }, allInReady ? 3100 : 250);
+    }, allInReady ? GAME_TIMING.allAnswersHoldMs : GAME_TIMING.countdownTickMs);
 
     return () => window.clearTimeout(timer);
   }, [livePhase, liveRoundId, liveRoomId, refreshGameState, secondsRemaining, serverState?.selected_game]);
@@ -427,7 +429,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
       void client
         .rpc(advanceRpc, { p_room_id: liveRoomId })
         .then(() => refreshGameState());
-    }, 6200);
+    }, GAME_TIMING.revealHoldMs);
 
     return () => window.clearTimeout(timer);
   }, [livePhase, liveRoundId, liveRoomId, refreshGameState, serverState?.selected_game]);
@@ -448,7 +450,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     };
 
     updateTimer();
-    const interval = setInterval(updateTimer, 500);
+    const interval = setInterval(updateTimer, GAME_TIMING.countdownTickMs);
     return () => clearInterval(interval);
   }, [liveRoundClosesAt, livePhase, liveRoundPosition]);
 
@@ -469,7 +471,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     };
 
     updateTimer();
-    const interval = window.setInterval(updateTimer, 250);
+    const interval = window.setInterval(updateTimer, GAME_TIMING.countdownTickMs);
     return () => window.clearInterval(interval);
   }, [livePhase, liveRoundId, liveRoundOpensAt]);
 
@@ -561,23 +563,28 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   }
 
   async function handleSelectGame(gameId: string) {
-    if (!isHost || !liveRoomId || !supabase) return;
+    if (!isHost || !liveRoomId || !supabase || isSelectingGame || isSubmitting) return;
     setConnectionError("");
-    const { error } = gameId === "trivia-dash"
-      ? await supabase.rpc("select_trivia_dash_room", { p_room_id: liveRoomId })
-      : await supabase.rpc("select_room_game", {
-          p_room_id: liveRoomId,
-          p_selected_game: gameId,
-        });
-    if (error) {
-      setConnectionError(error.message);
-      return;
+    setIsSelectingGame(true);
+    try {
+      const { error } = gameId === "trivia-dash"
+        ? await supabase.rpc("select_trivia_dash_room", { p_room_id: liveRoomId })
+        : await supabase.rpc("select_room_game", {
+            p_room_id: liveRoomId,
+            p_selected_game: gameId,
+          });
+      if (error) throw error;
+      setSelectedGame(gameId);
+      await refreshGameState();
+    } catch (err) {
+      setConnectionError(err instanceof Error ? err.message : "Could not select that game.");
+    } finally {
+      setIsSelectingGame(false);
     }
-    setSelectedGame(gameId);
-    await refreshGameState();
   }
 
   async function handleStartGame() {
+    if (isSelectingGame || isSubmitting) return;
     const game = playableGames.find((g) => g.id === selectedGame);
     if (!game || !game.template || !isGameEnabled(game)) {
       setConnectionError("Choose a playable game or Trivia Vault branch first.");
@@ -607,7 +614,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
 
   async function handleSubmitAnswer(optionId: string) {
     if (!supabase || !serverState?.current_question?.round_id || isSubmitting) return;
-    if (serverState.current_question.game_mode === "trivia_dash" && secondsUntilOpen !== null && secondsUntilOpen > 0) return;
+    if (hasDisplayFirstLead(serverState.current_question.game_mode) && secondsUntilOpen !== null && secondsUntilOpen > 0) return;
 
     setConnectionError("");
     setIsSubmitting(true);
@@ -839,6 +846,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         setFlagRoundCount={setFlagRoundCount}
         isHost={isHost}
         isPlaying={isSubmitting}
+        isSelectingGame={isSelectingGame}
         copied={copied}
         onCopyInvite={handleCopyInvite}
         error={connectionError}
@@ -1061,6 +1069,7 @@ function Lobby({
   setFlagRoundCount,
   isHost,
   isPlaying,
+  isSelectingGame,
   copied,
   onCopyInvite,
   error,
@@ -1077,6 +1086,7 @@ function Lobby({
   setFlagRoundCount: (count: FlagRoundCount) => void;
   isHost: boolean;
   isPlaying: boolean;
+  isSelectingGame: boolean;
   copied: boolean;
   onCopyInvite: () => void;
   error: string;
@@ -1183,6 +1193,7 @@ function Lobby({
                           aria-pressed={selectedGame === game.id}
                           className={`game-select ${selectedGame === game.id ? "selected" : ""}`}
                           key={game.id}
+                          disabled={isPlaying || isSelectingGame}
                           onClick={() => setSelectedGame(game.id)}
                         >
                           <span>{game.title}</span>
@@ -1199,6 +1210,7 @@ function Lobby({
                         aria-pressed={selectedGame === game.id}
                         className={`game-select ${selectedGame === game.id ? "selected" : ""}`}
                         key={game.id}
+                        disabled={isPlaying || isSelectingGame}
                         onClick={() => setSelectedGame(game.id)}
                       >
                         <Icon size={19} strokeWidth={2.5} />
@@ -1225,6 +1237,7 @@ function Lobby({
                           <button
                             type="button"
                             key={count}
+                            disabled={isPlaying || isSelectingGame}
                             aria-pressed={flagRoundCount === count}
                             onClick={() => setFlagRoundCount(count)}
                             className={`rounded-xl border px-2 py-2.5 font-mono text-sm font-black transition ${
@@ -1247,11 +1260,11 @@ function Lobby({
 
                   <button
                     className="button-lime mt-5 w-full flex items-center justify-center gap-2"
-                    disabled={isPlaying || !isGameEnabled(chosenGame)}
+                    disabled={isPlaying || isSelectingGame || !isGameEnabled(chosenGame)}
                     onClick={onStart}
                   >
                     <Play size={16} fill="currentColor" />
-                    {isPlaying ? "Launching..." : "Start Game"}
+                    {isSelectingGame ? "Saving choice..." : isPlaying ? "Launching..." : "Start Game"}
                   </button>
                 </div>
               </>
@@ -1329,7 +1342,10 @@ function GameScreen({
   const isClueHeist = question?.game_mode === "guess_image";
   const isTriviaDash = question?.game_mode === "trivia_dash";
   const isPreparingQuestion =
-    isTriviaDash && state.phase === "playing" && secondsUntilOpen !== null && secondsUntilOpen > 0;
+    hasDisplayFirstLead(question?.game_mode)
+    && state.phase === "playing"
+    && secondsUntilOpen !== null
+    && secondsUntilOpen > 0;
   const heist = state.clue_heist;
   const [guess, setGuess] = useState("");
   const [clueDraft, setClueDraft] = useState("");
@@ -1441,7 +1457,10 @@ function GameScreen({
         {/* Question Area */}
         <section className="my-auto py-8">
           {question ? (
-            <div className="rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] sm:p-9 shadow-2xl">
+            <div
+              key={`${question.round_id}-${state.phase}`}
+              className="phase-enter rounded-[2.2rem] bg-[#f0eee8] p-6 text-[#101314] shadow-2xl sm:p-9"
+            >
               <p className="text-xs font-black uppercase tracking-[.16em] text-black/45">
                 {isPreparingQuestion ? "Shared screen preview" : isRevealed ? "Answer Revealed" : isClueHeist ? `Clue ${heist?.clue_number || 1} of 20 · ${heist?.current_value || 100} points` : isWhoAmI ? "Conversation Round" : "Phone Controller"}
               </p>
