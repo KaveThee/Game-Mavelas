@@ -693,20 +693,18 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     }
   }
 
-  async function handleReturnToLobby() {
+  async function handleEndGame() {
     if (!supabase || !liveRoomId || !isHost || isSubmitting) return;
+    if (typeof window !== "undefined" && !window.confirm("End this game for everyone and return the room to waiting?")) return;
     setConnectionError("");
     setIsSubmitting(true);
     try {
-      const returnRpc = serverState?.selected_game === "trivia_dash"
-        ? "host_return_trivia_dash_to_lobby"
-        : "host_return_to_lobby";
-      const { error } = await supabase.rpc(returnRpc, { p_room_id: liveRoomId });
+      const { error } = await supabase.rpc("host_end_game", { p_room_id: liveRoomId });
       if (error) throw error;
       await refreshGameState();
       setScreen("lobby");
     } catch (err) {
-      setConnectionError(err instanceof Error ? err.message : "Could not return to the lobby.");
+      setConnectionError(err instanceof Error ? err.message : "Could not end the game.");
     } finally {
       setIsSubmitting(false);
     }
@@ -720,11 +718,29 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     setTimeout(() => setCopied(false), 2500);
   }
 
-  function handleLeaveRoom() {
-    sessionStorage.removeItem("mavelas_room_id");
-    setLiveRoomId("");
-    setServerState(null);
-    setScreen("home");
+  async function handleLeaveRoom() {
+    if (!supabase || !liveRoomId || isSubmitting) return;
+    if (typeof window !== "undefined" && !window.confirm(
+      isHost
+        ? "Leave this game? Host controls will pass to the next player."
+        : "Leave this game and remove yourself from the room?",
+    )) return;
+
+    setConnectionError("");
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("leave_game_room", { p_room_id: liveRoomId });
+      if (error) throw error;
+      sessionStorage.removeItem("mavelas_room_id");
+      setLiveRoomId("");
+      setServerState(null);
+      if (typeof window !== "undefined") window.location.assign("/");
+      else setScreen("home");
+    } catch (err) {
+      setConnectionError(err instanceof Error ? err.message : "Could not leave the game.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   if (isRestoringHost) {
@@ -757,6 +773,8 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         onWhoAmIClue={handleWhoAmIClue}
         onClueHeistGuess={handleClueHeistGuess}
         onNextClue={handleNextClue}
+        onLeave={handleLeaveRoom}
+        onEndGame={serverState.is_host ? handleEndGame : undefined}
       />
     );
   }
@@ -771,7 +789,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         isSubmitting={isSubmitting}
         error={connectionError}
         onReplay={isHost ? handleReplayGame : undefined}
-        onEndGame={isHost ? handleReturnToLobby : undefined}
+        onEndGame={isHost ? handleEndGame : undefined}
         onHome={handleLeaveRoom}
       />
     );
@@ -796,7 +814,6 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
         error={connectionError}
         onStart={handleStartGame}
         onLeave={handleLeaveRoom}
-        onHome={handleLeaveRoom}
       />
     );
   }
@@ -1019,7 +1036,6 @@ function Lobby({
   error,
   onStart,
   onLeave,
-  onHome,
 }: {
   room: string;
   players: LeaderboardEntry[];
@@ -1036,14 +1052,13 @@ function Lobby({
   error: string;
   onStart: () => void;
   onLeave: () => void;
-  onHome: () => void;
 }) {
   const displayUrl = `/display/${room}`;
 
   return (
     <main className="min-h-screen bg-[#101314] text-white">
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-5 pb-10 pt-5 sm:px-8">
-        <Topbar compact onHome={onHome} />
+        <Topbar compact />
 
         <section className="mt-10 grid gap-8 lg:grid-cols-[1.2fr_.8fr] lg:items-start">
           <div>
@@ -1117,7 +1132,7 @@ function Lobby({
                 onClick={onLeave}
                 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/40 hover:text-rose-400 transition"
               >
-                <LogOut size={14} /> Leave room
+                <LogOut size={14} /> Leave Game
               </button>
             </div>
           </div>
@@ -1258,6 +1273,8 @@ function GameScreen({
   onWhoAmIClue,
   onClueHeistGuess,
   onNextClue,
+  onLeave,
+  onEndGame,
 }: {
   state: ServerGameState;
   secondsRemaining: number | null;
@@ -1268,6 +1285,8 @@ function GameScreen({
   onWhoAmIClue: (clue: string) => Promise<void>;
   onClueHeistGuess: (guess: string) => void;
   onNextClue: () => void;
+  onLeave: () => void;
+  onEndGame?: () => void;
 }) {
   const question = state.current_question;
   const myAnswer = state.my_answer;
@@ -1358,6 +1377,27 @@ function GameScreen({
             </span>
           </div>
         </header>
+
+        <div className="mt-3 flex flex-wrap justify-end gap-2">
+          {onEndGame ? (
+            <button
+              type="button"
+              className="rounded-lg border border-rose-400/35 bg-rose-500/10 px-3 py-2 text-xs font-black uppercase tracking-[.1em] text-rose-200 transition hover:bg-rose-500/20 disabled:opacity-50"
+              disabled={isSubmitting}
+              onClick={onEndGame}
+            >
+              End Game
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[.05] px-3 py-2 text-xs font-black uppercase tracking-[.1em] text-white/65 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+            disabled={isSubmitting}
+            onClick={onLeave}
+          >
+            <LogOut size={14} /> Leave Game
+          </button>
+        </div>
 
         {/* Question Area */}
         <section className="my-auto py-8">
@@ -1625,7 +1665,7 @@ function ResultsScreen({
   return (
     <main className="min-h-screen bg-[#101314] text-white">
       <div className="mx-auto flex min-h-screen max-w-xl flex-col px-5 pb-10 pt-5 sm:px-8">
-        <Topbar compact onHome={onHome} />
+        <Topbar compact />
         <section className="my-auto rounded-[2.2rem] bg-[#f0eee8] p-8 text-center text-[#101314] shadow-2xl">
           <Trophy className="mx-auto text-[#101314]" size={56} />
           <p className="mt-6 text-xs font-black uppercase tracking-[.16em] text-black/45">Room {room}</p>
@@ -1678,7 +1718,7 @@ function ResultsScreen({
             )}
             {error && <p role="alert" className="text-sm font-bold text-rose-700">{error}</p>}
             <button type="button" className="text-sm font-bold text-black/60 hover:text-black py-2" onClick={onHome}>
-              Leave Room
+              Leave Game
             </button>
           </div>
         </section>
@@ -1698,14 +1738,26 @@ function Topbar({
   onCreate?: () => void;
   onJoin?: () => void;
 }) {
+  const brand = (
+    <>
+      <span className="grid h-10 w-10 place-items-center rounded-[.8rem] bg-[#d7ff3f] text-xl font-black text-[#101314]">
+        M
+      </span>
+      <span className="font-black tracking-[-.055em]">Game Mavelas</span>
+    </>
+  );
+
   return (
     <header className="relative z-10 flex items-center justify-between">
-      <button className="flex items-center gap-3 text-left" onClick={onHome} aria-label="Return home">
-        <span className="grid h-10 w-10 place-items-center rounded-[.8rem] bg-[#d7ff3f] text-xl font-black text-[#101314]">
-          M
-        </span>
-        <span className="font-black tracking-[-.055em]">Game Mavelas</span>
-      </button>
+      {onHome ? (
+        <button className="flex items-center gap-3 text-left" onClick={onHome} aria-label="Return home">
+          {brand}
+        </button>
+      ) : (
+        <div className="flex items-center gap-3 text-left" aria-label="Game Mavelas">
+          {brand}
+        </div>
+      )}
       {!compact && (
         <nav className="flex items-center gap-2">
           <button className="nav-button" onClick={onJoin}>
