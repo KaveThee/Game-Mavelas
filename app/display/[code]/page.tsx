@@ -240,15 +240,16 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
         if (
           nextEndGameSignal
           && nextRoom.status === "lobby"
-          && (
-            endGameSignalRef.current === undefined
-            || nextEndGameSignal !== endGameSignalRef.current
-          )
+          && endGameSignalRef.current !== undefined
+          && nextEndGameSignal !== endGameSignalRef.current
         ) {
           endGameSignalRef.current = nextEndGameSignal;
           window.location.assign("/");
           return;
         }
+        // A freshly opened display adopts the latest signal as its baseline.
+        // Only displays that were already connected when End Game fired should
+        // be sent home; reopening the display must support the next lobby.
         endGameSignalRef.current = nextEndGameSignal;
 
         assertPublicStateSafe(nextRoom, publicPhase);
