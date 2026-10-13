@@ -23,9 +23,13 @@ function action(id, playerId, sequence, payload) {
   return { id, playerId, sequence, payload, type: payload.kind, createdAt: context.now };
 }
 
-test("Trivia Dash is registered for development but remains unavailable to live rooms", () => {
+test("Trivia Dash follows its explicit release flag", () => {
   assert.equal(gameModuleCatalog.has("trivia-dash"), true);
-  assert.throws(() => gameModuleCatalog.requirePlayable("trivia-dash"), /not enabled/);
+  if (process.env.NEXT_PUBLIC_GAME_TRIVIA_DASH_ENABLED === "true") {
+    assert.equal(gameModuleCatalog.requirePlayable("trivia-dash"), triviaDashModule);
+  } else {
+    assert.throws(() => gameModuleCatalog.requirePlayable("trivia-dash"), /not enabled/);
+  }
 });
 
 test("Trivia Dash prepares a recoverable board and starts all players together", async () => {
