@@ -193,6 +193,11 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
   const liveRoundClosesAt = serverState?.current_question?.closes_at;
   const liveRoundPosition = serverState?.current_question?.position;
 
+  const openEntryScreen = (nextScreen: "create" | "join") => {
+    setConnectionError("");
+    setScreen(nextScreen);
+  };
+
   // Refresh Game State from Server Authority
   const refreshGameState = useCallback(async (roomId?: string) => {
     const id = roomId || liveRoomId;
@@ -849,7 +854,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
     <main className="min-h-screen overflow-hidden bg-[#101314] text-white">
       <div className="noise" />
       <div className="mx-auto max-w-6xl px-5 pb-12 pt-5 sm:px-8">
-        <Topbar onCreate={() => setScreen("create")} onJoin={() => setScreen("join")} />
+        <Topbar onCreate={() => openEntryScreen("create")} onJoin={() => openEntryScreen("join")} />
 
         <section className="grid min-h-[500px] items-center gap-10 py-16 lg:grid-cols-[1.15fr_.85fr] lg:py-20">
           <div className="relative z-10">
@@ -866,10 +871,10 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
                 <Monitor size={18} />
                 {isConnecting ? "Opening display..." : "Display"}
               </button>
-              <button className="button-secondary" onClick={() => setScreen("create")} disabled={isConnecting}>
+              <button className="button-secondary" onClick={() => openEntryScreen("create")} disabled={isConnecting}>
                 Create as host <Plus size={18} />
               </button>
-              <button className="button-secondary" onClick={() => setScreen("join")} disabled={isConnecting}>
+              <button className="button-secondary" onClick={() => openEntryScreen("join")} disabled={isConnecting}>
                 Join with code <ArrowRight size={17} />
               </button>
             </div>
@@ -898,9 +903,12 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
                 <span className="font-mono text-sm font-bold text-rose-600">00:12</span>
               </div>
               <div className="my-5 flex items-center justify-center rounded-2xl bg-white p-4 shadow-sm">
-                <img
+                <Image
                   src="https://flagcdn.com/ke.svg"
                   alt="Kenya flag preview"
+                  width={168}
+                  height={112}
+                  unoptimized
                   className="h-28 w-auto object-contain shadow"
                 />
               </div>
@@ -927,7 +935,9 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
               <p className="eyebrow">Playable decks</p>
               <h2 className="mt-2 text-3xl font-black tracking-[-.06em]">Party Modes</h2>
             </div>
-            <span className="text-sm text-[#d7ff3f] font-bold">Phase 3 Live</span>
+            <span className="text-sm text-[#d7ff3f] font-bold">
+              {homeGames.filter(isGameEnabled).length} modes live
+            </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {homeGames.map((game) => {
@@ -965,7 +975,7 @@ export function GameController({ hostCode }: { hostCode?: string } = {}) {
               <p className="text-sm text-white/55">Cast to the TV, keep phone controllers in hand.</p>
             </div>
           </div>
-          <button className="button-secondary mt-5 sm:mt-0" onClick={() => setScreen("create")}>
+          <button className="button-secondary mt-5 sm:mt-0" onClick={() => openEntryScreen("create")}>
             Host tonight <Crown size={17} />
           </button>
         </section>

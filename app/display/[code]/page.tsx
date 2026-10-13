@@ -116,7 +116,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
 
   useEffect(() => {
     if (!code || typeof window === "undefined") return;
-    setJoinHost(window.location.host);
+    const currentHost = window.location.host;
     const joinUrl = `${window.location.origin}/?code=${code}`;
     QRCode.toDataURL(joinUrl, {
       width: 280,
@@ -126,7 +126,10 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
         light: "#ffffff",
       },
     })
-      .then(setQrDataUrl)
+      .then((dataUrl) => {
+        setJoinHost(currentHost);
+        setQrDataUrl(dataUrl);
+      })
       .catch(console.error);
   }, [code]);
 
@@ -580,9 +583,12 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               {isLobby && (
                 <div className="mt-8 flex max-w-3xl flex-wrap items-center gap-7 rounded-[2rem] border border-[#d7ff3f]/30 bg-white/[.06] p-6 shadow-2xl sm:p-8">
                   {qrDataUrl ? (
-                    <img
+                    <Image
                       src={qrDataUrl}
                       alt="Scan to join room"
+                      width={224}
+                      height={224}
+                      unoptimized
                       className="h-48 w-48 rounded-3xl bg-white p-3 shadow-md shrink-0 sm:h-56 sm:w-56"
                     />
                   ) : (
