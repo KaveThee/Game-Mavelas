@@ -334,7 +334,8 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const secondsUntilOpen = round?.opens_at
     ? openingCountdown && openingCountdown.roundId === round.round_id ? openingCountdown.seconds : 1
     : null;
-  const isQuestionPreview = isTriviaDash && secondsUntilOpen !== null && secondsUntilOpen > 0;
+  const isQuestionPreview =
+    isTriviaDash && room?.phase === "playing" && round?.status === "open" && secondsUntilOpen !== null && secondsUntilOpen > 0;
   const flagDifficulty =
     round?.game_mode === "flag_frenzy" ? getFlagDifficulty(round.position, round.total_rounds) : null;
 
