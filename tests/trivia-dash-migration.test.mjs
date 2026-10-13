@@ -119,8 +119,8 @@ test("Trivia Dash gives the display a server-authoritative lead on every round",
   assert.match(sql, /clock_timestamp\(\) < v_opens_at/i);
   assert.match(sql, /revoke all on function private\.start_trivia_dash_immediate\(uuid\) from public, anon, authenticated/i);
   assert.match(sql, /grant execute on function public\.submit_trivia_dash_answer\(uuid, uuid\) to authenticated/i);
-  assert.match(controller, /isPreparingQuestion = isTriviaDash && secondsUntilOpen !== null && secondsUntilOpen > 0/);
+  assert.match(controller, /isTriviaDash && state\.phase === "playing" && secondsUntilOpen !== null && secondsUntilOpen > 0/);
   assert.match(controller, /Display gets the question first/);
-  assert.match(display, /isQuestionPreview = isTriviaDash && secondsUntilOpen !== null && secondsUntilOpen > 0/);
+  assert.match(display, /isTriviaDash && room\?\.phase === "playing" && round\?\.status === "open" && secondsUntilOpen !== null && secondsUntilOpen > 0/);
   assert.match(display, /Players are looking up before their answer pads unlock/);
 });
