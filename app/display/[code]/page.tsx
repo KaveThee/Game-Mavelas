@@ -558,14 +558,17 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
               {/* Logo Rush keeps a generous white clear-space around each mark. */}
               {isLogoQuiz && round?.media?.type === "logo" && (
                 <div className="mt-6 flex max-w-4xl items-center justify-start">
-                  <div className="grid h-48 w-full max-w-2xl place-items-center rounded-[2rem] border-4 border-white/10 bg-white p-8 shadow-2xl sm:h-56 lg:h-64">
+                  <div
+                    data-testid="logo-rush-media-frame"
+                    className="relative h-48 w-full max-w-2xl overflow-hidden rounded-[2rem] border-4 border-white/10 bg-white shadow-2xl sm:h-56 lg:h-64"
+                  >
                     <Image
                       src={round.media.url}
                       alt={round.media.alt}
-                      width={960}
-                      height={480}
+                      fill
+                      sizes="(min-width: 1024px) 42rem, (min-width: 640px) 80vw, 100vw"
                       unoptimized
-                      className="h-full w-full object-contain"
+                      className="object-contain p-8 sm:p-10"
                     />
                   </div>
                 </div>
