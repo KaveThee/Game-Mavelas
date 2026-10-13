@@ -29,6 +29,7 @@ type PublicRoom = {
   state_version: number;
   round_ends_at?: string | null;
   last_transition_at: string;
+  end_game_signal?: string | null;
   total_players: number;
   answered_count: number;
   slowest_player_name?: string | null;
@@ -109,6 +110,7 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [heist, setHeist] = useState<PublicClueHeist | null>(null);
   const roomIdRef = useRef("");
+  const endGameSignalRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     void params.then(({ code: roomCode }) => setCode(roomCode.toUpperCase()));
@@ -210,6 +212,19 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
             game_mode: "trivia_dash",
             duration_seconds: 25,
           } : null;
+        }
+
+        const nextEndGameSignal = nextRoom.end_game_signal ?? null;
+        if (endGameSignalRef.current === undefined) {
+          endGameSignalRef.current = nextEndGameSignal;
+        } else if (
+          nextEndGameSignal
+          && nextEndGameSignal !== endGameSignalRef.current
+          && nextRoom.status === "lobby"
+        ) {
+          endGameSignalRef.current = nextEndGameSignal;
+          window.location.assign("/");
+          return;
         }
 
         assertPublicStateSafe(nextRoom, publicPhase);
@@ -326,15 +341,20 @@ export default function SharedDisplay({ params }: { params: Promise<{ code: stri
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1600px] flex-col">
         {/* Header */}
         <header className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[#d7ff3f] text-2xl font-black text-[#101314]">
+          <button
+            type="button"
+            className="flex items-center gap-4 text-left"
+            onClick={() => window.location.assign("/")}
+            aria-label="Return display to main menu"
+          >
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[#d7ff3f] text-2xl font-black text-[#101314] transition-transform hover:scale-105">
               M
             </span>
             <div>
               <p className="text-2xl font-black tracking-[-.05em]">Game Mavelas</p>
               <p className="text-sm font-bold uppercase tracking-[.14em] text-white/45">Party Display</p>
             </div>
-          </div>
+          </button>
 
           <div className="flex items-center gap-4">
             {!isLobby && !isResults && (
